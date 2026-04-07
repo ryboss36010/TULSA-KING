@@ -107,6 +107,15 @@ export default {
       }
     }
 
+    // Trigger ESPN schedule sync on demand
+    if (path === "/sync-schedules") {
+      const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+      await syncESPNSchedules(supabase);
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Cleanup endpoint: mark stale past events as final
     if (path === "/cleanup") {
       const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
@@ -164,9 +173,14 @@ export default {
     await settleBets(supabase, env);
     await cleanupStaleGames(supabase);
 
-    // Every 5 minutes: full sync of all primary sports (upcoming games + odds)
+    // Every 5 minutes: full sync of all primary sports odds
     if (minute % 5 === 0) {
       await syncPrimarySports(supabase, env);
+    }
+
+    // Every 30 minutes: sync ESPN schedules (7-day lookahead)
+    if (minute % 30 === 0) {
+      await syncESPNSchedules(supabase);
     }
 
     // Nightly backup (5am UTC)
@@ -175,6 +189,113 @@ export default {
     }
   },
 };
+
+// ESPN schedule API mappings — sport key → ESPN endpoint path
+const ESPN_SCHEDULE_MAP: Record<string, string> = {
+  americanfootball_nfl: "football/nfl",
+  americanfootball_ncaaf: "football/college-football",
+  basketball_nba: "basketball/nba",
+  basketball_ncaab: "basketball/mens-college-basketball",
+  baseball_mlb: "baseball/mlb",
+  icehockey_nhl: "hockey/nhl",
+};
+
+// Sync schedules from ESPN for the next 7 days so games are searchable before odds are posted
+async function syncESPNSchedules(supabase: any) {
+  const today = new Date();
+
+  for (const [sportKey, espnPath] of Object.entries(ESPN_SCHEDULE_MAP)) {
+    try {
+      // Fetch next 7 days
+      for (let dayOffset = 0; dayOffset <= 7; dayOffset++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() + dayOffset);
+        const dateStr = date.toISOString().slice(0, 10).replace(/-/g, "");
+
+        const url = `https://site.api.espn.com/apis/site/v2/sports/${espnPath}/scoreboard?dates=${dateStr}`;
+        const resp = await fetch(url);
+        const data: any = await resp.json();
+
+        if (!data.events || !Array.isArray(data.events)) continue;
+
+        for (const event of data.events) {
+          const competitions = event.competitions?.[0];
+          if (!competitions) continue;
+
+          const homeComp = competitions.competitors?.find((c: any) => c.homeAway === "home");
+          const awayComp = competitions.competitors?.find((c: any) => c.homeAway === "away");
+          if (!homeComp || !awayComp) continue;
+
+          const homeTeam = homeComp.team?.displayName || homeComp.team?.name || "TBD";
+          const awayTeam = awayComp.team?.displayName || awayComp.team?.name || "TBD";
+          const startTime = event.date;
+          const espnId = `espn_${event.id}`;
+
+          // Determine status from ESPN data
+          const espnStatus = competitions.status?.type?.name || "STATUS_SCHEDULED";
+          let status = "upcoming";
+          if (espnStatus === "STATUS_IN_PROGRESS" || espnStatus === "STATUS_HALFTIME") {
+            status = "live";
+          } else if (espnStatus === "STATUS_FINAL" || espnStatus === "STATUS_POSTPONED") {
+            status = "final";
+          }
+
+          // Only insert if we don't already have this game (check by teams + start time match)
+          // Use external_id = espn_{id} so we don't create duplicates
+          // If an Odds API game exists for the same matchup, skip it
+          const { data: existing } = await supabase
+            .from("games")
+            .select("id")
+            .eq("sport", sportKey)
+            .eq("home_team", homeTeam)
+            .eq("away_team", awayTeam)
+            .gte("start_time", new Date(new Date(startTime).getTime() - 3600000).toISOString())
+            .lte("start_time", new Date(new Date(startTime).getTime() + 3600000).toISOString())
+            .limit(1);
+
+          if (existing && existing.length > 0) continue; // Already have this game
+
+          // Also check by espn external_id
+          const { data: existingEspn } = await supabase
+            .from("games")
+            .select("id")
+            .eq("external_id", espnId)
+            .limit(1);
+
+          if (existingEspn && existingEspn.length > 0) {
+            // Update status if changed
+            if (status === "final" || status === "live") {
+              const scores: any = {};
+              if (homeComp.score) scores.home_score = parseInt(homeComp.score);
+              if (awayComp.score) scores.away_score = parseInt(awayComp.score);
+              await supabase
+                .from("games")
+                .update({ status, ...scores, last_updated: new Date().toISOString() })
+                .eq("external_id", espnId);
+            }
+            continue;
+          }
+
+          // Insert new game from ESPN schedule
+          await supabase.from("games").upsert(
+            {
+              external_id: espnId,
+              sport: sportKey,
+              home_team: homeTeam,
+              away_team: awayTeam,
+              start_time: startTime,
+              status,
+              last_updated: new Date().toISOString(),
+            },
+            { onConflict: "external_id" }
+          );
+        }
+      }
+    } catch (e) {
+      console.error(`Error syncing ESPN schedule for ${sportKey}:`, e);
+    }
+  }
+}
 
 // Mark games that started 4+ hours ago and are still "upcoming"/"live" as "final"
 async function cleanupStaleGames(supabase: any) {

@@ -69,7 +69,7 @@ export default function EventSearch() {
           `home_team.ilike.%${q}%,away_team.ilike.%${q}%,sport.ilike.%${q}%`
         )
         .order("start_time", { ascending: true })
-        .limit(20);
+        .limit(50);
 
       // Also search sports list
       const matchingSports = allSports.filter(
