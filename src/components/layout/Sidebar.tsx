@@ -10,23 +10,21 @@ const SPORT_NAV = [
   { key: "basketball_nba", label: "NBA" },
   { key: "baseball_mlb", label: "MLB" },
   { key: "icehockey_nhl", label: "NHL" },
-  { key: "soccer_epl", label: "Premier League" },
-  { key: "soccer_uefa_champs_league", label: "Champions League" },
-  { key: "mma_mixed_martial_arts", label: "UFC / MMA" },
-  { key: "boxing_boxing", label: "Boxing" },
   { key: "americanfootball_ncaaf", label: "College Football" },
   { key: "basketball_ncaab", label: "College Basketball" },
   { key: "soccer_usa_mls", label: "MLS" },
-  { key: "motorsport_formula_one_world_championship", label: "Formula 1" },
+  { key: "mma_mixed_martial_arts", label: "UFC / MMA" },
+  { key: "boxing_boxing", label: "Boxing" },
+  { key: "tennis_atp_us_open", label: "Tennis" },
 ];
 
 const FUTURES_NAV = [
-  { key: "golf_masters_tournament_winner", label: "The Masters" },
-  { key: "basketball_nba_championship_winner", label: "NBA Champion" },
   { key: "americanfootball_nfl_super_bowl_winner", label: "Super Bowl" },
-  { key: "icehockey_nhl_championship_winner", label: "Stanley Cup" },
+  { key: "basketball_nba_championship_winner", label: "NBA Champion" },
   { key: "baseball_mlb_world_series_winner", label: "World Series" },
+  { key: "icehockey_nhl_championship_winner", label: "Stanley Cup" },
   { key: "americanfootball_ncaaf_championship_winner", label: "CFP Champion" },
+  { key: "golf_masters_tournament_winner", label: "The Masters" },
   { key: "golf_pga_championship_winner", label: "PGA Championship" },
 ];
 

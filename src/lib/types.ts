@@ -91,7 +91,7 @@ export interface OddsApiSport {
   has_outrights: boolean;
 }
 
-// Known sport labels — USA-focused + top global
+// Known sport labels — major USA sports + tennis/golf/UFC
 export const SPORT_LABELS: Record<string, string> = {
   americanfootball_nfl: "NFL",
   americanfootball_ncaaf: "College Football",
@@ -105,8 +105,6 @@ export const SPORT_LABELS: Record<string, string> = {
   icehockey_nhl: "NHL",
   icehockey_nhl_championship_winner: "Stanley Cup Winner",
   soccer_usa_mls: "MLS",
-  soccer_epl: "Premier League",
-  soccer_uefa_champs_league: "Champions League",
   mma_mixed_martial_arts: "UFC / MMA",
   boxing_boxing: "Boxing",
   golf_masters_tournament_winner: "The Masters",
@@ -117,7 +115,6 @@ export const SPORT_LABELS: Record<string, string> = {
   tennis_atp_wimbledon: "Wimbledon",
   tennis_atp_us_open: "US Open (Tennis)",
   tennis_atp_aus_open: "Australian Open",
-  motorsport_formula_one_world_championship: "Formula 1",
 };
 
 export function getSportLabel(sportKey: string, apiTitle?: string): string {

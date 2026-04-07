@@ -24,8 +24,7 @@ export default function HomePage() {
         .from("games")
         .select("*")
         .in("status", ["upcoming", "live"])
-        .order("start_time", { ascending: true })
-        .limit(200);
+        .order("start_time", { ascending: true });
 
       if (gamesData) {
         const bettable = filterBettableGames(gamesData);

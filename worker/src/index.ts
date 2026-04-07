@@ -7,7 +7,7 @@ interface Env {
   LEDGER_BACKUP?: R2Bucket;
 }
 
-// Primary sports: USA-focused + top global events
+// Major USA sports + golf, tennis, UFC
 const PRIMARY_SPORTS = [
   // American Football
   "americanfootball_nfl",
@@ -24,10 +24,8 @@ const PRIMARY_SPORTS = [
   // Hockey
   "icehockey_nhl",
   "icehockey_nhl_championship_winner",
-  // Soccer (top leagues USA fans watch)
+  // Soccer (USA league only)
   "soccer_usa_mls",
-  "soccer_epl",
-  "soccer_uefa_champs_league",
   // MMA / Boxing
   "mma_mixed_martial_arts",
   "boxing_boxing",
@@ -41,8 +39,6 @@ const PRIMARY_SPORTS = [
   "tennis_atp_wimbledon",
   "tennis_atp_us_open",
   "tennis_atp_aus_open",
-  // Motorsport
-  "motorsport_formula_one_world_championship",
 ];
 
 // Sports that have scores API for settlement
@@ -54,8 +50,6 @@ const SETTLEMENT_SPORTS = [
   "baseball_mlb",
   "icehockey_nhl",
   "soccer_usa_mls",
-  "soccer_epl",
-  "soccer_uefa_champs_league",
   "mma_mixed_martial_arts",
   "boxing_boxing",
 ];
