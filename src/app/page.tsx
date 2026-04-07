@@ -9,6 +9,8 @@ import GameRow from "@/components/sports/GameRow";
 import SportTabs from "@/components/sports/SportTabs";
 import EventSearch from "@/components/search/EventSearch";
 import { useBetSlip } from "@/components/betslip/BetSlipContext";
+import { formatDateLabel } from "@/lib/time";
+import { filterBettableGames } from "@/lib/games";
 
 export default function HomePage() {
   const [games, setGames] = useState<Game[]>([]);
@@ -17,7 +19,7 @@ export default function HomePage() {
   const [activeSport, setActiveSport] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const supabase = createClient();
-  const { addSelection } = useBetSlip();
+  const { toggleSelection } = useBetSlip();
 
   useEffect(() => {
     async function fetchGames() {
@@ -29,8 +31,9 @@ export default function HomePage() {
         .limit(200);
 
       if (gamesData) {
-        setGames(gamesData);
-        const gameIds = gamesData.map((g) => g.id);
+        const bettable = filterBettableGames(gamesData);
+        setGames(bettable);
+        const gameIds = bettable.map((g) => g.id);
         if (gameIds.length > 0) {
           const { data: marketsData } = await supabase
             .from("markets")
@@ -86,7 +89,7 @@ export default function HomePage() {
   }, []);
 
   function handleSelectBet(game: Game, market: Market, pick: string) {
-    addSelection({ game, market, pick });
+    toggleSelection({ game, market, pick });
   }
 
   // Get unique sports for tabs
@@ -114,26 +117,10 @@ export default function HomePage() {
     (g) => g.status !== "live" && !isOutrightSport(g.sport)
   );
 
-  // Group upcoming by date, then by sport
+  // Group upcoming by date label using timezone-aware formatter
   const gamesByDate = upcomingGames.reduce(
     (acc, game) => {
-      const now = new Date();
-      const gameDate = new Date(game.start_time);
-      const isToday = gameDate.toDateString() === now.toDateString();
-      const tomorrow = new Date(now);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const isTomorrow = gameDate.toDateString() === tomorrow.toDateString();
-
-      let label: string;
-      if (isToday) label = "Today";
-      else if (isTomorrow) label = "Tomorrow";
-      else
-        label = gameDate.toLocaleDateString([], {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-        });
-
+      const label = formatDateLabel(game.start_time);
       if (!acc[label]) acc[label] = [];
       acc[label].push(game);
       return acc;
@@ -164,17 +151,17 @@ export default function HomePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-2 md:px-4 py-3 space-y-3">
+    <div className="max-w-4xl mx-auto px-3 md:px-6 py-4 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between px-2">
-        <h1 className="text-xl font-black text-white md:hidden">
+      <div className="flex items-center justify-between px-1">
+        <h1 className="text-2xl font-black text-white md:hidden">
           TULSA <span className="text-[var(--accent-green)]">KING</span>
         </h1>
         <button
           onClick={() => setSearchOpen(!searchOpen)}
-          className="p-2 rounded-lg bg-[var(--bg-button)] text-[var(--text-muted)] hover:text-white md:hidden"
+          className="p-2.5 rounded-lg bg-[var(--bg-button)] text-[var(--text-muted)] hover:text-white md:hidden"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </button>
@@ -195,65 +182,71 @@ export default function HomePage() {
 
       {/* Live games */}
       {liveGames.length > 0 && (
-        <section className="space-y-0.5">
-          <div className="flex items-center gap-2 px-3 py-2">
-            <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-            <span className="text-xs font-semibold text-red-500">LIVE</span>
+        <section className="space-y-2">
+          <div className="flex items-center gap-2 px-2">
+            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            <span className="text-sm font-bold text-red-500">LIVE NOW</span>
           </div>
-          {liveGames.map((game) => (
-            <GameRow
-              key={game.id}
-              game={game}
-              markets={markets.filter((m) => m.game_id === game.id)}
-              onSelectBet={handleSelectBet}
-            />
-          ))}
+          <div className="space-y-1.5">
+            {liveGames.map((game) => (
+              <GameRow
+                key={game.id}
+                game={game}
+                markets={markets.filter((m) => m.game_id === game.id)}
+                onSelectBet={handleSelectBet}
+              />
+            ))}
+          </div>
         </section>
       )}
 
       {/* Upcoming by date */}
       {dateEntries.map(({ date, bySport }) => (
-        <section key={date} className="space-y-1">
-          <div className="px-3 py-1.5">
-            <span className="text-xs font-semibold text-[var(--text-muted)] uppercase">
+        <section key={date} className="space-y-2">
+          <div className="px-2">
+            <span className="text-sm font-bold text-[var(--text-secondary)] uppercase">
               {date}
             </span>
           </div>
-          {Object.entries(bySport).map(([sport, sportGames]) => (
-            <SportSection
-              key={sport}
-              sport={sport}
-              games={sportGames}
-              markets={markets}
-              onSelectBet={handleSelectBet}
-            />
-          ))}
+          <div className="space-y-3">
+            {Object.entries(bySport).map(([sport, sportGames]) => (
+              <SportSection
+                key={sport}
+                sport={sport}
+                games={sportGames}
+                markets={markets}
+                onSelectBet={handleSelectBet}
+              />
+            ))}
+          </div>
         </section>
       ))}
 
       {/* Futures */}
       {futuresGames.length > 0 && (
-        <section className="space-y-0.5">
-          <div className="px-3 py-2">
-            <span className="text-xs font-semibold text-[var(--accent-green)] uppercase">
+        <section className="space-y-2">
+          <div className="px-2">
+            <span className="text-sm font-bold text-[var(--accent-green)] uppercase">
               Futures
             </span>
           </div>
-          {futuresGames.map((game) => (
-            <GameRow
-              key={game.id}
-              game={game}
-              markets={markets.filter((m) => m.game_id === game.id)}
-              onSelectBet={handleSelectBet}
-            />
-          ))}
+          <div className="space-y-1.5">
+            {futuresGames.map((game) => (
+              <GameRow
+                key={game.id}
+                game={game}
+                markets={markets.filter((m) => m.game_id === game.id)}
+                onSelectBet={handleSelectBet}
+              />
+            ))}
+          </div>
         </section>
       )}
 
       {/* Empty state */}
       {filteredGames.length === 0 && (
         <div className="text-center py-16">
-          <p className="text-[var(--text-muted)] text-sm">
+          <p className="text-[var(--text-muted)] text-base">
             No games available. Use search to find events.
           </p>
         </div>

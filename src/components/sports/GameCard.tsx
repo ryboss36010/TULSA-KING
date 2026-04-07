@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { Game, Market } from "@/lib/types";
 import { isOutrightSport } from "@/lib/types";
+import { formatGameDate, formatGameTime } from "@/lib/time";
 import OddsButton from "./OddsButton";
 
 interface GameCardProps {
@@ -18,7 +19,6 @@ export default function GameCard({ game, markets, onSelectBet }: GameCardProps) 
   const total = markets.find((m) => m.type === "over_under");
   const outrightMarkets = markets.filter((m) => m.type === "outright");
 
-  const startTime = new Date(game.start_time);
   const isLive = game.status === "live";
 
   // Outright/futures event card
@@ -49,11 +49,7 @@ export default function GameCard({ game, markets, onSelectBet }: GameCardProps) 
             </div>
             <div className="text-right">
               <p className="text-gray-400 text-xs">
-                {startTime.toLocaleDateString("en-US", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                })}
+                {formatGameDate(game.start_time)}
               </p>
               <p className="text-green-500 text-xs font-medium">Futures</p>
             </div>
@@ -117,16 +113,9 @@ export default function GameCard({ game, markets, onSelectBet }: GameCardProps) 
               </div>
             ) : (
               <p className="text-gray-400 text-xs">
-                {startTime.toLocaleDateString("en-US", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                })}
+                {formatGameDate(game.start_time)}
                 <br />
-                {startTime.toLocaleTimeString("en-US", {
-                  hour: "numeric",
-                  minute: "2-digit",
-                })}
+                {formatGameTime(game.start_time)}
               </p>
             )}
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
-import { getSportIcon, getSportLabel } from "@/lib/types";
+import { getSportLabel } from "@/lib/types";
+import SportIcon from "@/components/icons/SportIcon";
 
 interface SportTabsProps {
   sports: string[];
@@ -18,10 +19,10 @@ export default function SportTabs({
   if (sports.length === 0) return null;
 
   return (
-    <div className="flex gap-1 overflow-x-auto no-scrollbar py-1">
+    <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
       <button
         onClick={() => onSelect(null)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+        className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
           activeSport === null
             ? "bg-[var(--accent-green)] text-black"
             : "bg-[var(--bg-button)] text-[var(--text-secondary)] hover:bg-[var(--bg-button-hover)]"
@@ -33,16 +34,19 @@ export default function SportTabs({
         <button
           key={sport}
           onClick={() => onSelect(sport)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
             activeSport === sport
               ? "bg-[var(--accent-green)] text-black"
               : "bg-[var(--bg-button)] text-[var(--text-secondary)] hover:bg-[var(--bg-button-hover)]"
           }`}
         >
-          <span>{getSportIcon(sport)}</span>
+          <SportIcon
+            sport={sport}
+            className={`w-4 h-4 ${activeSport === sport ? "text-black" : ""}`}
+          />
           <span>{getSportLabel(sport)}</span>
           {gameCounts?.[sport] && (
-            <span className="text-[10px] opacity-60">
+            <span className="text-xs opacity-60">
               {gameCounts[sport]}
             </span>
           )}

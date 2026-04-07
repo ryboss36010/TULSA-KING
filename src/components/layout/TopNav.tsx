@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import EventSearch from "@/components/search/EventSearch";
 
 const links = [
   { href: "/", label: "Home" },
@@ -16,11 +17,16 @@ export default function TopNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="hidden md:flex items-center justify-between px-6 h-14 bg-[var(--bg-secondary)] border-b border-[var(--border)]">
-      <Link href="/" className="text-lg font-black text-white tracking-wider">
+    <nav className="hidden md:flex items-center gap-4 px-4 h-14 bg-[var(--bg-secondary)] border-b border-[var(--border)] sticky top-0 z-40">
+      <Link
+        href="/"
+        className="text-lg font-black text-white tracking-wider shrink-0"
+      >
         TULSA <span className="text-[var(--accent-green)]">KING</span>
       </Link>
-      <div className="flex gap-5">
+
+      {/* Desktop nav links (hidden when sidebar is visible) */}
+      <div className="hidden md:flex lg:hidden gap-4 ml-4">
         {links.map((link) => {
           const isActive =
             link.href === "/"
@@ -41,9 +47,15 @@ export default function TopNav() {
           );
         })}
       </div>
+
+      {/* Search bar - centered */}
+      <div className="flex-1 max-w-md mx-auto">
+        <EventSearch />
+      </div>
+
       <Link
         href="/settings"
-        className="text-[var(--text-muted)] hover:text-white text-sm"
+        className="text-[var(--text-muted)] hover:text-white text-sm shrink-0"
       >
         Settings
       </Link>

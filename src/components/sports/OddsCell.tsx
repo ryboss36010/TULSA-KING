@@ -22,18 +22,22 @@ export default function OddsCell({
         e.stopPropagation();
         onClick();
       }}
-      className={`flex flex-col items-center justify-center rounded-sm px-1 py-1.5 min-w-0 transition-colors ${
+      className={`flex flex-col items-center justify-center rounded-md px-2 py-2.5 min-w-0 transition-all ${
         isSelected
-          ? "bg-[var(--accent-green)] text-black"
+          ? "bg-[var(--accent-green)] text-black ring-1 ring-[var(--accent-green)]"
           : "bg-[var(--bg-button)] text-[var(--text-secondary)] hover:bg-[var(--bg-button-hover)]"
       }`}
     >
       {label && (
-        <span className={`text-[10px] leading-tight ${isSelected ? "text-black/70" : "text-[var(--text-muted)]"}`}>
+        <span
+          className={`text-xs leading-tight ${isSelected ? "text-black/70" : "text-[var(--text-muted)]"}`}
+        >
           {label}
         </span>
       )}
-      <span className={`text-xs font-semibold leading-tight ${isSelected ? "text-black" : "text-white"}`}>
+      <span
+        className={`text-sm font-bold leading-tight ${isSelected ? "text-black" : "text-white"}`}
+      >
         {formatOdds(odds)}
       </span>
     </button>

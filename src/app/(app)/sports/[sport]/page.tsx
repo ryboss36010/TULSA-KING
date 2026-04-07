@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Game, Market } from "@/lib/types";
-import { getSportLabel, getSportIcon, isOutrightSport } from "@/lib/types";
+import { getSportLabel, isOutrightSport } from "@/lib/types";
+import SportIcon from "@/components/icons/SportIcon";
+import { formatDateLabel } from "@/lib/time";
 import GameRow from "@/components/sports/GameRow";
 import { useBetSlip } from "@/components/betslip/BetSlipContext";
+import { filterBettableGames } from "@/lib/games";
 
 const WORKER_URL = "https://tulsa-king-odds.ryboss36010.workers.dev";
 
@@ -16,7 +19,7 @@ export default function SportPage() {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
-  const { addSelection } = useBetSlip();
+  const { toggleSelection } = useBetSlip();
 
   useEffect(() => {
     async function load() {
@@ -43,8 +46,9 @@ export default function SportPage() {
       }
 
       if (gamesData) {
-        setGames(gamesData);
-        const gameIds = gamesData.map((g) => g.id);
+        const bettable = filterBettableGames(gamesData);
+        setGames(bettable);
+        const gameIds = bettable.map((g) => g.id);
         if (gameIds.length > 0) {
           const { data: marketsData } = await supabase
             .from("markets")
@@ -60,7 +64,7 @@ export default function SportPage() {
   }, [sport]);
 
   function handleSelectBet(game: Game, market: Market, pick: string) {
-    addSelection({ game, market, pick });
+    toggleSelection({ game, market, pick });
   }
 
   const isOutright = isOutrightSport(sport);
@@ -68,23 +72,7 @@ export default function SportPage() {
   const gamesByDate = !isOutright
     ? games.reduce(
         (acc, game) => {
-          const now = new Date();
-          const gameDate = new Date(game.start_time);
-          const isToday = gameDate.toDateString() === now.toDateString();
-          const tomorrow = new Date(now);
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          const isTomorrow = gameDate.toDateString() === tomorrow.toDateString();
-
-          let label: string;
-          if (isToday) label = "Today";
-          else if (isTomorrow) label = "Tomorrow";
-          else
-            label = gameDate.toLocaleDateString([], {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            });
-
+          const label = formatDateLabel(game.start_time);
           if (!acc[label]) acc[label] = [];
           acc[label].push(game);
           return acc;
@@ -104,10 +92,10 @@ export default function SportPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-2 md:px-4 py-3 space-y-3">
-      <div className="flex items-center gap-2 px-2">
-        <span className="text-lg">{getSportIcon(sport)}</span>
-        <h1 className="text-lg font-bold text-white">{getSportLabel(sport)}</h1>
+    <div className="max-w-4xl mx-auto px-3 md:px-6 py-4 space-y-5">
+      <div className="flex items-center gap-2 px-1">
+        <SportIcon sport={sport} className="w-6 h-6 text-[var(--text-secondary)]" />
+        <h1 className="text-xl font-bold text-white">{getSportLabel(sport)}</h1>
         {isOutright && (
           <span className="text-[10px] text-[var(--accent-green)] font-semibold bg-[var(--bg-button)] px-2 py-0.5 rounded">
             FUTURES
@@ -122,7 +110,7 @@ export default function SportPage() {
           </p>
         </div>
       ) : isOutright ? (
-        <div className="space-y-0.5">
+        <div className="space-y-1.5">
           {games.map((game) => (
             <GameRow
               key={game.id}
@@ -134,35 +122,37 @@ export default function SportPage() {
         </div>
       ) : (
         Object.entries(gamesByDate).map(([date, dateGames]) => (
-          <section key={date} className="space-y-1">
-            <div className="px-3 py-1.5">
-              <span className="text-xs font-semibold text-[var(--text-muted)] uppercase">
+          <section key={date} className="space-y-2">
+            <div className="px-2">
+              <span className="text-sm font-bold text-[var(--text-secondary)] uppercase">
                 {date}
               </span>
             </div>
 
             {/* Column headers */}
-            <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,64px)] md:grid-cols-[minmax(0,1fr)_repeat(3,80px)] gap-0.5 items-center">
+            <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,72px)] md:grid-cols-[minmax(0,1fr)_repeat(3,96px)] gap-1 items-center">
               <div />
-              <span className="text-[10px] text-[var(--text-muted)] text-center font-medium">
+              <span className="text-xs text-[var(--text-muted)] text-center font-semibold">
                 SPREAD
               </span>
-              <span className="text-[10px] text-[var(--text-muted)] text-center font-medium">
+              <span className="text-xs text-[var(--text-muted)] text-center font-semibold">
                 TOTAL
               </span>
-              <span className="text-[10px] text-[var(--text-muted)] text-center font-medium">
+              <span className="text-xs text-[var(--text-muted)] text-center font-semibold">
                 MONEY
               </span>
             </div>
 
-            {dateGames.map((game) => (
-              <GameRow
-                key={game.id}
-                game={game}
-                markets={markets.filter((m) => m.game_id === game.id)}
-                onSelectBet={handleSelectBet}
-              />
-            ))}
+            <div className="space-y-1">
+              {dateGames.map((game) => (
+                <GameRow
+                  key={game.id}
+                  game={game}
+                  markets={markets.filter((m) => m.game_id === game.id)}
+                  onSelectBet={handleSelectBet}
+                />
+              ))}
+            </div>
           </section>
         ))
       )}

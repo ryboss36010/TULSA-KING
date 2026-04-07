@@ -7,6 +7,7 @@ import type { Game, Market } from "@/lib/types";
 import { isOutrightSport, getSportLabel } from "@/lib/types";
 import MarketGroup from "@/components/sports/MarketGroup";
 import { useBetSlip } from "@/components/betslip/BetSlipContext";
+import { formatGameDateTime, formatGameDateLong } from "@/lib/time";
 
 export default function GameDetailPage() {
   const { game: gameId } = useParams<{ sport: string; game: string }>();
@@ -15,7 +16,7 @@ export default function GameDetailPage() {
   const [activeTab, setActiveTab] = useState("game-lines");
   const [searchQuery, setSearchQuery] = useState("");
   const supabase = createClient();
-  const { addSelection } = useBetSlip();
+  const { toggleSelection } = useBetSlip();
 
   useEffect(() => {
     async function load() {
@@ -90,7 +91,7 @@ export default function GameDetailPage() {
   }
 
   function handleSelectBet(g: Game, market: Market, pick: string) {
-    addSelection({ game: g, market, pick });
+    toggleSelection({ game: g, market, pick });
   }
 
   const isOutright = isOutrightSport(game.sport);
@@ -122,12 +123,7 @@ export default function GameDetailPage() {
           </p>
           <h1 className="text-white text-2xl font-bold">{game.home_team}</h1>
           <p className="text-[var(--text-secondary)] text-sm">
-            {getSportLabel(game.sport)} &middot;{" "}
-            {new Date(game.start_time).toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "short",
-              day: "numeric",
-            })}
+            {getSportLabel(game.sport)} &middot; {formatGameDateLong(game.start_time)}
           </p>
           <p className="text-[var(--text-muted)] text-xs">
             {outrightMarkets.length} outcomes available
@@ -217,13 +213,7 @@ export default function GameDetailPage() {
         </div>
         {game.status === "upcoming" && (
           <p className="text-[var(--text-secondary)] text-sm">
-            {new Date(game.start_time).toLocaleString("en-US", {
-              weekday: "long",
-              month: "short",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            })}
+            {formatGameDateTime(game.start_time)}
           </p>
         )}
       </div>

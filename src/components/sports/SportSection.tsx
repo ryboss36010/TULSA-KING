@@ -1,5 +1,6 @@
 import type { Game, Market } from "@/lib/types";
-import { getSportLabel, getSportIcon } from "@/lib/types";
+import { getSportLabel } from "@/lib/types";
+import SportIcon from "@/components/icons/SportIcon";
 import GameRow from "./GameRow";
 
 interface SportSectionProps {
@@ -18,35 +19,36 @@ export default function SportSection({
   if (games.length === 0) return null;
 
   return (
-    <section className="space-y-0.5">
+    <section className="space-y-1">
       {/* Sport header with column labels */}
-      <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,64px)] md:grid-cols-[minmax(0,1fr)_repeat(3,80px)] gap-0.5 items-center px-0">
-        <div className="flex items-center gap-2 px-3 py-2">
-          <span className="text-sm">{getSportIcon(sport)}</span>
-          <span className="text-xs font-semibold text-white">
+      <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,72px)] md:grid-cols-[minmax(0,1fr)_repeat(3,96px)] gap-1 items-center">
+        <div className="flex items-center gap-2 px-4 py-2">
+          <SportIcon sport={sport} className="w-4 h-4 text-[var(--text-secondary)]" />
+          <span className="text-sm font-bold text-white">
             {getSportLabel(sport)}
           </span>
         </div>
-        <span className="text-[10px] text-[var(--text-muted)] text-center font-medium">
+        <span className="text-xs text-[var(--text-muted)] text-center font-semibold">
           SPREAD
         </span>
-        <span className="text-[10px] text-[var(--text-muted)] text-center font-medium">
+        <span className="text-xs text-[var(--text-muted)] text-center font-semibold">
           TOTAL
         </span>
-        <span className="text-[10px] text-[var(--text-muted)] text-center font-medium">
+        <span className="text-xs text-[var(--text-muted)] text-center font-semibold">
           MONEY
         </span>
       </div>
 
-      {/* Game rows */}
-      {games.map((game) => (
-        <GameRow
-          key={game.id}
-          game={game}
-          markets={markets.filter((m) => m.game_id === game.id)}
-          onSelectBet={onSelectBet}
-        />
-      ))}
+      <div className="space-y-1">
+        {games.map((game) => (
+          <GameRow
+            key={game.id}
+            game={game}
+            markets={markets.filter((m) => m.game_id === game.id)}
+            onSelectBet={onSelectBet}
+          />
+        ))}
+      </div>
     </section>
   );
 }

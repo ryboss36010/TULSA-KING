@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Game, OddsApiSport } from "@/lib/types";
-import { getSportIcon, getSportLabel, isOutrightSport } from "@/lib/types";
+import { getSportLabel, isOutrightSport } from "@/lib/types";
+import SportIcon from "@/components/icons/SportIcon";
 
 const WORKER_URL = "https://tulsa-king-odds.ryboss36010.workers.dev";
 
@@ -223,9 +224,7 @@ export default function EventSearch() {
                         onClick={() => handleGameClick(r.game!)}
                         className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-800 transition text-left"
                       >
-                        <span className="text-lg">
-                          {getSportIcon(r.game!.sport)}
-                        </span>
+                        <SportIcon sport={r.game!.sport} className="w-5 h-5 text-[var(--text-secondary)]" />
                         <div className="flex-1 min-w-0">
                           <p className="text-white text-sm font-medium truncate">
                             {r.game!.away_team
@@ -278,9 +277,7 @@ export default function EventSearch() {
                         disabled={fetchingSport === r.sport!.key}
                         className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-800 transition text-left disabled:opacity-50"
                       >
-                        <span className="text-lg">
-                          {getSportIcon(r.sport!.key)}
-                        </span>
+                        <SportIcon sport={r.sport!.key} className="w-5 h-5 text-[var(--text-secondary)]" />
                         <div className="flex-1 min-w-0">
                           <p className="text-white text-sm font-medium truncate">
                             {r.sport!.title}

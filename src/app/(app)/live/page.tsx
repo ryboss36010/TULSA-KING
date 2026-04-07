@@ -5,13 +5,14 @@ import { createClient } from "@/lib/supabase/client";
 import type { Game, Market } from "@/lib/types";
 import SportSection from "@/components/sports/SportSection";
 import { useBetSlip } from "@/components/betslip/BetSlipContext";
+import { filterBettableGames } from "@/lib/games";
 
 export default function LivePage() {
   const [games, setGames] = useState<Game[]>([]);
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
-  const { addSelection } = useBetSlip();
+  const { toggleSelection } = useBetSlip();
 
   useEffect(() => {
     async function fetchLive() {
@@ -22,8 +23,9 @@ export default function LivePage() {
         .order("start_time", { ascending: true });
 
       if (gamesData) {
-        setGames(gamesData);
-        const gameIds = gamesData.map((g) => g.id);
+        const bettable = filterBettableGames(gamesData);
+        setGames(bettable);
+        const gameIds = bettable.map((g) => g.id);
         if (gameIds.length > 0) {
           const { data: marketsData } = await supabase
             .from("markets")
@@ -69,7 +71,7 @@ export default function LivePage() {
   }, []);
 
   function handleSelectBet(game: Game, market: Market, pick: string) {
-    addSelection({ game, market, pick });
+    toggleSelection({ game, market, pick });
   }
 
   const gamesBySport = games.reduce(

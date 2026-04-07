@@ -7,8 +7,46 @@ interface Env {
   LEDGER_BACKUP?: R2Bucket;
 }
 
-// Primary sports: auto-synced hourly. Covers all major US sports + popular intl.
+// Primary sports: USA-focused + top global events
 const PRIMARY_SPORTS = [
+  // American Football
+  "americanfootball_nfl",
+  "americanfootball_ncaaf",
+  "americanfootball_nfl_super_bowl_winner",
+  "americanfootball_ncaaf_championship_winner",
+  // Basketball
+  "basketball_nba",
+  "basketball_ncaab",
+  "basketball_nba_championship_winner",
+  // Baseball
+  "baseball_mlb",
+  "baseball_mlb_world_series_winner",
+  // Hockey
+  "icehockey_nhl",
+  "icehockey_nhl_championship_winner",
+  // Soccer (top leagues USA fans watch)
+  "soccer_usa_mls",
+  "soccer_epl",
+  "soccer_uefa_champs_league",
+  // MMA / Boxing
+  "mma_mixed_martial_arts",
+  "boxing_boxing",
+  // Golf majors
+  "golf_masters_tournament_winner",
+  "golf_pga_championship_winner",
+  "golf_us_open_winner",
+  "golf_the_open_championship_winner",
+  // Tennis majors
+  "tennis_atp_french_open",
+  "tennis_atp_wimbledon",
+  "tennis_atp_us_open",
+  "tennis_atp_aus_open",
+  // Motorsport
+  "motorsport_formula_one_world_championship",
+];
+
+// Sports that have scores API for settlement
+const SETTLEMENT_SPORTS = [
   "americanfootball_nfl",
   "americanfootball_ncaaf",
   "basketball_nba",
@@ -17,11 +55,10 @@ const PRIMARY_SPORTS = [
   "icehockey_nhl",
   "soccer_usa_mls",
   "soccer_epl",
+  "soccer_uefa_champs_league",
   "mma_mixed_martial_arts",
+  "boxing_boxing",
 ];
-
-// Sports that only have settlement (scores API) — used by settleBets
-const SETTLEMENT_SPORTS = [...PRIMARY_SPORTS];
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -38,7 +75,6 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
-    // GET /all-sports — returns all sports the Odds API offers (free endpoint)
     if (path === "/all-sports") {
       const apiUrl = `https://api.the-odds-api.com/v4/sports/?apiKey=${env.ODDS_API_KEY}&all=true`;
       const response = await fetch(apiUrl);
@@ -48,7 +84,6 @@ export default {
       });
     }
 
-    // GET /sports — list active sports only
     if (path === "/sports") {
       const apiUrl = `https://api.the-odds-api.com/v4/sports/?apiKey=${env.ODDS_API_KEY}`;
       const response = await fetch(apiUrl);
@@ -58,7 +93,6 @@ export default {
       });
     }
 
-    // GET /fetch-sport/:sport — on-demand: fetch odds for any sport, upsert to Supabase, return data
     if (path.startsWith("/fetch-sport/")) {
       const sport = path.split("/").filter(Boolean)[1];
       if (!sport) {
@@ -79,8 +113,22 @@ export default {
       }
     }
 
-    // GET /odds/:sport — proxy odds for a sport (direct API passthrough)
-    // GET /odds/:sport/:eventId — odds for a specific game
+    // Cleanup endpoint: mark stale past events as final
+    if (path === "/cleanup") {
+      const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+      const cutoff = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(); // 4 hours ago
+      const { data } = await supabase
+        .from("games")
+        .update({ status: "final", last_updated: new Date().toISOString() })
+        .in("status", ["upcoming", "live"])
+        .lt("start_time", cutoff)
+        .select("id");
+      return new Response(
+        JSON.stringify({ cleaned: data?.length ?? 0 }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (path.startsWith("/odds/")) {
       const parts = path.split("/").filter(Boolean);
       const sport = parts[1];
@@ -93,19 +141,16 @@ export default {
 
       const response = await fetch(apiUrl);
       const data = await response.json();
-
       return new Response(JSON.stringify(data), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // GET /scores/:sport — live scores
     if (path.startsWith("/scores/")) {
       const sport = path.split("/")[2];
       const apiUrl = `https://api.the-odds-api.com/v4/sports/${sport}/scores/?apiKey=${env.ODDS_API_KEY}&daysFrom=1`;
       const response = await fetch(apiUrl);
       const data = await response.json();
-
       return new Response(JSON.stringify(data), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -120,11 +165,12 @@ export default {
     const minute = now.getUTCMinutes();
     const hour = now.getUTCHours();
 
-    // Always settle bets + refresh live scores (runs every 5 min)
+    // Always: settle bets, refresh live scores, and clean up stale games
     await settleBets(supabase, env);
     await refreshLiveScores(supabase, env);
+    await cleanupStaleGames(supabase);
 
-    // Sync primary sports hourly (at the top of each hour)
+    // Sync primary sports hourly
     if (minute < 5) {
       await syncPrimarySports(supabase, env);
     }
@@ -136,9 +182,17 @@ export default {
   },
 };
 
-// Sync all primary sports — called hourly by cron
+// Mark games that started 4+ hours ago and are still "upcoming"/"live" as "final"
+async function cleanupStaleGames(supabase: any) {
+  const cutoff = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+  await supabase
+    .from("games")
+    .update({ status: "final", last_updated: new Date().toISOString() })
+    .eq("status", "upcoming")
+    .lt("start_time", cutoff);
+}
+
 async function syncPrimarySports(supabase: any, env: Env) {
-  // First, fetch the full active sports list (free call) to discover new sports
   try {
     const sportsResp = await fetch(
       `https://api.the-odds-api.com/v4/sports/?apiKey=${env.ODDS_API_KEY}`
@@ -146,28 +200,35 @@ async function syncPrimarySports(supabase: any, env: Env) {
     const allActive: any[] = await sportsResp.json();
 
     if (Array.isArray(allActive)) {
-      // Sync primary sports that are currently active
-      const activePrimary = allActive
-        .filter((s) => PRIMARY_SPORTS.includes(s.key))
-        .map((s) => s.key);
+      const activeKeys = new Set(allActive.map((s) => s.key));
 
-      for (const sport of activePrimary) {
-        await fetchAndSyncSport(supabase, env, sport);
+      for (const sport of PRIMARY_SPORTS) {
+        if (activeKeys.has(sport)) {
+          try {
+            await fetchAndSyncSport(supabase, env, sport);
+          } catch (e) {
+            console.error(`Error syncing ${sport}:`, e);
+          }
+        }
       }
     }
   } catch (e) {
     console.error("Error in syncPrimarySports:", e);
-    // Fallback: sync all primary sports regardless
     for (const sport of PRIMARY_SPORTS) {
-      await fetchAndSyncSport(supabase, env, sport);
+      try {
+        await fetchAndSyncSport(supabase, env, sport);
+      } catch (e) {
+        console.error(`Error syncing ${sport}:`, e);
+      }
     }
   }
 }
 
-// Fetch odds for a single sport and upsert games + markets into Supabase
-// Used by both cron sync and on-demand /fetch-sport endpoint
 async function fetchAndSyncSport(supabase: any, env: Env, sport: string) {
-  const isOutright = sport.includes("_winner") || sport.includes("_championship") || sport.includes("_series_winner");
+  const isOutright =
+    sport.includes("_winner") ||
+    sport.includes("_championship") ||
+    sport.includes("_series_winner");
   const markets = isOutright ? "outrights" : "h2h,spreads,totals";
 
   const response = await fetch(
@@ -183,7 +244,25 @@ async function fetchAndSyncSport(supabase: any, env: Env, sport: string) {
   for (const event of events) {
     const eventTime = new Date(event.commence_time);
 
-    // Derive a display name for outright events (no home/away)
+    // CRITICAL: Skip events that have already started (unless outright/futures which don't "start" traditionally)
+    // For standard sports, if the event started more than 10 minutes ago, don't mark as upcoming
+    const minutesSinceStart = (now.getTime() - eventTime.getTime()) / 60000;
+
+    let status: string;
+    if (isOutright) {
+      // Outrights: if the event date has passed, skip it entirely
+      if (minutesSinceStart > 24 * 60) continue; // skip if > 24h past
+      status = "upcoming";
+    } else if (minutesSinceStart > 0 && minutesSinceStart <= 240) {
+      // Started within last 4 hours — could be live
+      status = "live";
+    } else if (minutesSinceStart > 240) {
+      // Started more than 4 hours ago — game is over, skip
+      continue;
+    } else {
+      status = "upcoming";
+    }
+
     const homeTeam = event.home_team || formatSportTitle(sport);
     const awayTeam = event.away_team || "";
 
@@ -193,7 +272,7 @@ async function fetchAndSyncSport(supabase: any, env: Env, sport: string) {
       home_team: homeTeam,
       away_team: awayTeam,
       start_time: event.commence_time,
-      status: eventTime <= now ? "live" : "upcoming",
+      status,
       last_updated: now.toISOString(),
     };
 
@@ -213,7 +292,6 @@ async function fetchAndSyncSport(supabase: any, env: Env, sport: string) {
         const marketRows = buildMarketData(game.id, market);
         if (!marketRows) continue;
 
-        // buildMarketData returns an array for outrights, single object otherwise
         const rows = Array.isArray(marketRows) ? marketRows : [marketRows];
         for (const row of rows) {
           await supabase
@@ -229,38 +307,31 @@ async function fetchAndSyncSport(supabase: any, env: Env, sport: string) {
   return syncedGames;
 }
 
-// Convert sport key to a readable title (fallback for outrights)
 function formatSportTitle(sport: string): string {
   return sport
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// Refresh scores for live games — runs every 5 min
 async function refreshLiveScores(supabase: any, env: Env) {
-  // Get all games currently marked as live
-  const { data: liveGames } = await supabase
+  const now = new Date().toISOString();
+
+  // Mark games as live if their start_time has passed and they're still "upcoming"
+  // But only if started within last 4 hours
+  const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+  const { data: shouldBeLive } = await supabase
     .from("games")
-    .select("sport")
-    .eq("status", "live");
+    .select("id, sport, external_id")
+    .eq("status", "upcoming")
+    .lte("start_time", now)
+    .gte("start_time", fourHoursAgo);
 
-  if (!liveGames || liveGames.length === 0) {
-    // Also check for games that should be live now (started but not marked)
-    const now = new Date().toISOString();
-    const { data: shouldBeLive } = await supabase
-      .from("games")
-      .select("id, sport, external_id")
-      .eq("status", "upcoming")
-      .lte("start_time", now);
-
-    if (shouldBeLive && shouldBeLive.length > 0) {
-      // Mark them as live
-      for (const g of shouldBeLive) {
-        await supabase
-          .from("games")
-          .update({ status: "live", last_updated: now })
-          .eq("id", g.id);
-      }
+  if (shouldBeLive && shouldBeLive.length > 0) {
+    for (const g of shouldBeLive) {
+      await supabase
+        .from("games")
+        .update({ status: "live", last_updated: now })
+        .eq("id", g.id);
     }
   }
 
@@ -270,9 +341,10 @@ async function refreshLiveScores(supabase: any, env: Env) {
     .select("sport")
     .eq("status", "live");
 
-  const liveSports = [...new Set((liveSportGames || []).map((g: any) => g.sport))];
+  const liveSports = [
+    ...new Set((liveSportGames || []).map((g: any) => g.sport)),
+  ];
 
-  // Fetch fresh scores for each live sport
   for (const sport of liveSports) {
     try {
       const response = await fetch(
@@ -302,7 +374,6 @@ async function refreshLiveScores(supabase: any, env: Env) {
           .eq("external_id", score.id);
       }
 
-      // Also refresh odds for live games in this sport
       await fetchAndSyncSport(supabase, env, sport);
     } catch (e) {
       console.error(`Error refreshing live scores for ${sport}:`, e);
@@ -324,12 +395,10 @@ async function settleBets(supabase: any, env: Env) {
         if (!score.completed) continue;
 
         const homeScore = parseInt(
-          score.scores?.find((s: any) => s.name === score.home_team)?.score ||
-            "0"
+          score.scores?.find((s: any) => s.name === score.home_team)?.score || "0"
         );
         const awayScore = parseInt(
-          score.scores?.find((s: any) => s.name === score.away_team)?.score ||
-            "0"
+          score.scores?.find((s: any) => s.name === score.away_team)?.score || "0"
         );
 
         const { data: game } = await supabase
@@ -349,9 +418,7 @@ async function settleBets(supabase: any, env: Env) {
 
         const { data: activeBets } = await supabase
           .from("bets")
-          .select(
-            "*, market:markets(*), counterparties:bet_counterparties(*)"
-          )
+          .select("*, market:markets(*), counterparties:bet_counterparties(*)")
           .eq("game_id", game.id)
           .eq("status", "active");
 
@@ -369,10 +436,7 @@ async function settleBets(supabase: any, env: Env) {
 }
 
 async function backupLedger(supabase: any, env: Env) {
-  if (!env.LEDGER_BACKUP) {
-    console.log("R2 backup not configured, skipping ledger backup");
-    return;
-  }
+  if (!env.LEDGER_BACKUP) return;
   try {
     const { data: ledgerData } = await supabase
       .from("ledger")
@@ -382,11 +446,7 @@ async function backupLedger(supabase: any, env: Env) {
     if (ledgerData) {
       const timestamp = new Date().toISOString().split("T")[0];
       const json = JSON.stringify(ledgerData, null, 2);
-      await env.LEDGER_BACKUP.put(
-        `ledger-backup-${timestamp}.json`,
-        json
-      );
-      console.log(`Ledger backup saved: ledger-backup-${timestamp}.json`);
+      await env.LEDGER_BACKUP.put(`ledger-backup-${timestamp}.json`, json);
     }
   } catch (e) {
     console.error("Ledger backup failed:", e);
@@ -441,7 +501,6 @@ function buildMarketData(gameId: string, market: any) {
     };
   }
 
-  // Outrights (futures) — each outcome becomes its own market row
   if (market.key === "outrights") {
     return outcomes.map((outcome: any) => ({
       game_id: gameId,
@@ -458,10 +517,7 @@ function buildMarketData(gameId: string, market: any) {
   return null;
 }
 
-function determineBetResult(
-  bet: any,
-  game: any
-): "win" | "loss" | "push" {
+function determineBetResult(bet: any, game: any): "win" | "loss" | "push" {
   const market = bet.market;
   const homeWon = game.home_score > game.away_score;
   const totalPoints = game.home_score + game.away_score;
@@ -480,7 +536,6 @@ function determineBetResult(
         : game.away_score - Number(market.line);
     const opponentScore =
       bet.pick === "home" ? game.away_score : game.home_score;
-
     if (adjustedScore === opponentScore) return "push";
     if (adjustedScore > opponentScore) return "win";
     return "loss";
@@ -489,14 +544,12 @@ function determineBetResult(
   if (market.type === "over_under") {
     if (totalPoints === Number(market.line)) return "push";
     if (bet.pick === "over" && totalPoints > Number(market.line)) return "win";
-    if (bet.pick === "under" && totalPoints < Number(market.line))
-      return "win";
+    if (bet.pick === "under" && totalPoints < Number(market.line)) return "win";
     return "loss";
   }
 
-  // Outright bets — settled manually or via future API support
   if (market.type === "outright") {
-    return "loss"; // Default, overridden when outright results are known
+    return "loss";
   }
 
   return "loss";
