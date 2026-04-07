@@ -38,6 +38,20 @@ const NBA_TEAMS: Record<string, string> = {
   "Toronto Raptors": "tor", "Utah Jazz": "uta", "Washington Wizards": "wsh",
 };
 
+// MLB team name → logo filename
+const MLB_TEAMS: Record<string, string> = {
+  "Arizona Diamondbacks": "ari", "Atlanta Braves": "atl", "Baltimore Orioles": "bal",
+  "Boston Red Sox": "bos", "Chicago Cubs": "chc", "Chicago White Sox": "chw",
+  "Cincinnati Reds": "cin", "Cleveland Guardians": "cle", "Colorado Rockies": "col",
+  "Detroit Tigers": "det", "Houston Astros": "hou", "Kansas City Royals": "kc",
+  "Los Angeles Angels": "laa", "Los Angeles Dodgers": "lad", "Miami Marlins": "mia",
+  "Milwaukee Brewers": "mil", "Minnesota Twins": "min", "New York Mets": "nym",
+  "New York Yankees": "nyy", "Oakland Athletics": "oak", "Philadelphia Phillies": "phi",
+  "Pittsburgh Pirates": "pit", "San Diego Padres": "sd", "Seattle Mariners": "sea",
+  "San Francisco Giants": "sf", "St. Louis Cardinals": "stl", "Tampa Bay Rays": "tb",
+  "Texas Rangers": "tex", "Toronto Blue Jays": "tor", "Washington Nationals": "wsh",
+};
+
 // NHL team name → logo filename
 const NHL_TEAMS: Record<string, string> = {
   "Anaheim Ducks": "ana", "Arizona Coyotes": "ari", "Boston Bruins": "bos",
@@ -162,6 +176,16 @@ function getLogoPath(teamName: string, sport: string): string | null {
   if (sport.startsWith("basketball_nba") || sport.includes("nba_championship")) {
     const abbr = NBA_TEAMS[teamName];
     return abbr ? `/logos/nba/${abbr}.png` : null;
+  }
+  if (sport.startsWith("baseball_mlb") || sport.includes("world_series")) {
+    const abbr = MLB_TEAMS[teamName];
+    return abbr ? `/logos/mlb/${abbr}.png` : null;
+  }
+  if (sport === "baseball_ncaa") {
+    // Reuse NCAA logos for college baseball
+    const file = NCAA_TEAMS[teamName];
+    if (file) return `/logos/ncaaf/${file}.png`;
+    return null;
   }
   if (sport.startsWith("icehockey_nhl") || sport.includes("nhl_championship")) {
     const abbr = NHL_TEAMS[teamName];

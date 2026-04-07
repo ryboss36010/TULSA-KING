@@ -7,6 +7,7 @@ const ALLOWED_PREFIXES = [
   "basketball_nba",
   "basketball_ncaab",
   "baseball_mlb",
+  "baseball_ncaa",
   "icehockey_nhl",
   "soccer_usa_mls",
   "mma_mixed_martial_arts",

@@ -143,34 +143,34 @@ export default function GameRow({ game, markets }: GameRowProps) {
   // Standard game row
   return (
     <div ref={rowRef} className="bg-[var(--bg-secondary)] rounded-lg overflow-hidden">
-      <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,72px)] md:grid-cols-[minmax(0,1fr)_repeat(3,96px)] gap-1 items-stretch">
+      <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,56px)] sm:grid-cols-[minmax(0,1fr)_repeat(3,72px)] md:grid-cols-[minmax(0,1fr)_repeat(3,96px)] gap-0.5 sm:gap-1 items-stretch">
         {/* Away team row */}
         <Link
           href={`/sports/${game.sport}/${game.id}`}
-          className="flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--bg-button)] transition-colors"
+          className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-2.5 hover:bg-[var(--bg-button)] transition-colors"
         >
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {isLive &&
               game.away_score !== undefined &&
               game.away_score !== null ? (
-                <span className="text-base text-white font-bold w-6 text-right">
+                <span className="text-sm sm:text-base text-white font-bold w-5 sm:w-6 text-right shrink-0">
                   {game.away_score}
                 </span>
               ) : !isLive ? (
-                <span className="text-xs text-[var(--text-muted)] w-16 shrink-0">
+                <span className="text-[10px] sm:text-xs text-[var(--text-muted)] w-12 sm:w-16 shrink-0">
                   {timeStr}
                 </span>
               ) : null}
-              <TeamLogo teamName={game.away_team} sport={game.sport} className="w-5 h-5 shrink-0" />
-              <span className="text-base text-white truncate">
+              <TeamLogo teamName={game.away_team} sport={game.sport} className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+              <span className="text-sm sm:text-base text-white truncate">
                 {game.away_team}
               </span>
             </div>
           </div>
           {/* +N more markets indicator */}
           {totalMarketCount > 3 && (
-            <span className="text-xs text-[var(--accent-green)] font-medium shrink-0">
+            <span className="text-[10px] sm:text-xs text-[var(--accent-green)] font-medium shrink-0">
               +{totalMarketCount - 3}
             </span>
           )}
@@ -214,27 +214,27 @@ export default function GameRow({ game, markets }: GameRowProps) {
         {/* Home team row */}
         <Link
           href={`/sports/${game.sport}/${game.id}`}
-          className="flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--bg-button)] transition-colors"
+          className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-2.5 hover:bg-[var(--bg-button)] transition-colors"
         >
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {isLive &&
               game.home_score !== undefined &&
               game.home_score !== null ? (
-                <span className="text-base text-white font-bold w-6 text-right">
+                <span className="text-sm sm:text-base text-white font-bold w-5 sm:w-6 text-right shrink-0">
                   {game.home_score}
                 </span>
               ) : !isLive ? (
-                <span className="w-16 shrink-0" />
+                <span className="w-12 sm:w-16 shrink-0" />
               ) : null}
-              <TeamLogo teamName={game.home_team} sport={game.sport} className="w-5 h-5 shrink-0" />
-              <span className="text-base text-white truncate">
+              <TeamLogo teamName={game.home_team} sport={game.sport} className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+              <span className="text-sm sm:text-base text-white truncate">
                 {game.home_team}
               </span>
             </div>
           </div>
           {isLive && (
-            <span className="text-xs text-red-500 font-bold animate-pulse shrink-0">
+            <span className="text-[10px] sm:text-xs text-red-500 font-bold animate-pulse shrink-0">
               LIVE
             </span>
           )}

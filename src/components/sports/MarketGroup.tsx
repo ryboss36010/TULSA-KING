@@ -73,7 +73,8 @@ export default function MarketGroup({
                 {market.name}
               </span>
               <div className="flex gap-2">
-                {market.type === "over_under" ? (
+                {market.type === "over_under" ||
+                (market.type === "prop" && market.over_odds != null) ? (
                   <>
                     <OddsBtn
                       label={`O ${market.line}`}
@@ -88,6 +89,14 @@ export default function MarketGroup({
                       onClick={() => onSelectBet(game, market, "under")}
                     />
                   </>
+                ) : market.type === "prop" && market.away_odds === 0 ? (
+                  // Yes/No prop (e.g., Anytime TD)
+                  <OddsBtn
+                    label="Yes"
+                    odds={market.home_odds}
+                    selected={isSelected(market.id, market.name)}
+                    onClick={() => onSelectBet(game, market, market.name)}
+                  />
                 ) : (
                   <>
                     <OddsBtn

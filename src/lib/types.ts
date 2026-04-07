@@ -101,6 +101,7 @@ export const SPORT_LABELS: Record<string, string> = {
   basketball_ncaab: "College Basketball",
   basketball_nba_championship_winner: "NBA Champion",
   baseball_mlb: "MLB",
+  baseball_ncaa: "College Baseball",
   baseball_mlb_world_series_winner: "World Series Winner",
   icehockey_nhl: "NHL",
   icehockey_nhl_championship_winner: "Stanley Cup Winner",

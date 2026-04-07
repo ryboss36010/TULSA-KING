@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Game, Market } from "@/lib/types";
 import { isOutrightSport, getSportLabel } from "@/lib/types";
 import MarketGroup from "@/components/sports/MarketGroup";
+import LiveStats from "@/components/sports/LiveStats";
 import { useBetSlip } from "@/components/betslip/BetSlipContext";
 import { formatGameDateTime, formatGameDateLong } from "@/lib/time";
 
@@ -169,12 +170,9 @@ export default function GameDetailPage() {
   const gameLines = markets.filter(
     (m) => m.type === "moneyline" || m.type === "spread" || m.type === "over_under"
   );
-  const playerProps = markets.filter(
-    (m) => m.type === "prop" && m.name.toLowerCase().includes("player")
-  );
-  const gameProps = markets.filter(
-    (m) => m.type === "prop" && !m.name.toLowerCase().includes("player")
-  );
+  const allProps = markets.filter((m) => m.type === "prop");
+  const playerProps = allProps; // All props from the Odds API are player props
+  const gameProps: Market[] = [];
 
   const tabs = [
     { id: "game-lines", label: "Game Lines", count: gameLines.length },
@@ -217,6 +215,9 @@ export default function GameDetailPage() {
           </p>
         )}
       </div>
+
+      {/* Live stats from ESPN */}
+      <LiveStats game={game} />
 
       {/* Market tabs */}
       <div className="flex gap-1 bg-[var(--bg-secondary)] rounded-lg p-1 overflow-x-auto no-scrollbar">
@@ -264,13 +265,32 @@ export default function GameDetailPage() {
             />
           </>
         )}
-        {activeTab === "player-props" && (
-          <MarketGroup
-            title="Player Props"
-            markets={playerProps}
-            game={game}
-            onSelectBet={handleSelectBet}
-          />
+        {activeTab === "player-props" && playerProps.length > 0 && (
+          <>
+            {Object.entries(
+              playerProps.reduce(
+                (acc, m) => {
+                  // Extract category from name like "LeBron James - Points" → "Points"
+                  const dashIdx = m.name.lastIndexOf(" - ");
+                  const category = dashIdx >= 0 ? m.name.slice(dashIdx + 3) : "Other";
+                  if (!acc[category]) acc[category] = [];
+                  acc[category].push(m);
+                  return acc;
+                },
+                {} as Record<string, Market[]>
+              )
+            )
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([category, catMarkets]) => (
+                <MarketGroup
+                  key={category}
+                  title={category}
+                  markets={catMarkets.sort((a, b) => a.name.localeCompare(b.name))}
+                  game={game}
+                  onSelectBet={handleSelectBet}
+                />
+              ))}
+          </>
         )}
         {activeTab === "game-props" && (
           <MarketGroup

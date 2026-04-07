@@ -21,6 +21,7 @@ const PRIMARY_SPORTS = [
   // Baseball
   "baseball_mlb",
   "baseball_mlb_world_series_winner",
+  "baseball_ncaa",
   // Hockey
   "icehockey_nhl",
   "icehockey_nhl_championship_winner",
@@ -41,6 +42,54 @@ const PRIMARY_SPORTS = [
   "tennis_atp_aus_open",
 ];
 
+// Player prop markets to fetch per sport (Odds API v4 event-level endpoint)
+const PLAYER_PROP_MARKETS: Record<string, string[]> = {
+  basketball_nba: [
+    "player_points",
+    "player_rebounds",
+    "player_assists",
+    "player_threes",
+    "player_points_rebounds_assists",
+  ],
+  basketball_ncaab: [
+    "player_points",
+    "player_rebounds",
+    "player_assists",
+  ],
+  americanfootball_nfl: [
+    "player_pass_tds",
+    "player_pass_yds",
+    "player_rush_yds",
+    "player_reception_yds",
+    "player_receptions",
+    "player_anytime_td",
+  ],
+  americanfootball_ncaaf: [
+    "player_pass_tds",
+    "player_pass_yds",
+    "player_rush_yds",
+  ],
+  baseball_mlb: [
+    "pitcher_strikeouts",
+    "batter_home_runs",
+    "batter_hits",
+    "batter_total_bases",
+    "batter_rbis",
+  ],
+  baseball_ncaa: [
+    "pitcher_strikeouts",
+    "batter_home_runs",
+    "batter_hits",
+    "batter_total_bases",
+  ],
+  icehockey_nhl: [
+    "player_points",
+    "player_goals",
+    "player_assists",
+    "player_shots_on_goal",
+  ],
+};
+
 // Sports that have scores API for settlement
 const SETTLEMENT_SPORTS = [
   "americanfootball_nfl",
@@ -48,6 +97,7 @@ const SETTLEMENT_SPORTS = [
   "basketball_nba",
   "basketball_ncaab",
   "baseball_mlb",
+  "baseball_ncaa",
   "icehockey_nhl",
   "soccer_usa_mls",
   "mma_mixed_martial_arts",
@@ -116,6 +166,118 @@ export default {
       });
     }
 
+    // ESPN live stats proxy — returns live game data from ESPN
+    if (path.startsWith("/espn-live/")) {
+      const parts = path.split("/").filter(Boolean);
+      const sport = parts[1]; // e.g., "basketball_nba"
+      const espnPath = ESPN_SCHEDULE_MAP[sport];
+      if (!espnPath) {
+        return new Response(JSON.stringify({ error: "Sport not mapped to ESPN" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Optional: pass home_team and away_team as query params to match the right game
+      const homeTeam = url.searchParams.get("home_team") || "";
+      const awayTeam = url.searchParams.get("away_team") || "";
+
+      try {
+        const resp = await fetch(
+          `https://site.api.espn.com/apis/site/v2/sports/${espnPath}/scoreboard`
+        );
+        const data: any = await resp.json();
+        const events = data.events || [];
+
+        // Find matching event by team names
+        let match = null;
+        for (const ev of events) {
+          const comp = ev.competitions?.[0];
+          if (!comp) continue;
+          const teams = comp.competitors?.map((c: any) => c.team?.displayName?.toLowerCase()) || [];
+          if (
+            (homeTeam && teams.some((t: string) => t.includes(homeTeam.toLowerCase()))) ||
+            (awayTeam && teams.some((t: string) => t.includes(awayTeam.toLowerCase())))
+          ) {
+            match = ev;
+            break;
+          }
+        }
+
+        if (!match) {
+          return new Response(JSON.stringify({ found: false }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const comp = match.competitions[0];
+        const status = comp.status || {};
+        const homeComp = comp.competitors?.find((c: any) => c.homeAway === "home");
+        const awayComp = comp.competitors?.find((c: any) => c.homeAway === "away");
+
+        const result: any = {
+          found: true,
+          status: status.type?.name,
+          detail: status.type?.shortDetail || status.type?.detail,
+          clock: status.displayClock,
+          period: status.period,
+          home: {
+            team: homeComp?.team?.displayName,
+            score: homeComp?.score,
+            linescores: homeComp?.linescores?.map((ls: any) => ls.value) || [],
+            leaders: (homeComp?.leaders || []).map((l: any) => ({
+              category: l.name,
+              player: l.leaders?.[0]?.athlete?.displayName,
+              value: l.leaders?.[0]?.displayValue,
+            })),
+          },
+          away: {
+            team: awayComp?.team?.displayName,
+            score: awayComp?.score,
+            linescores: awayComp?.linescores?.map((ls: any) => ls.value) || [],
+            leaders: (awayComp?.leaders || []).map((l: any) => ({
+              category: l.name,
+              player: l.leaders?.[0]?.athlete?.displayName,
+              value: l.leaders?.[0]?.displayValue,
+            })),
+          },
+        };
+
+        // Baseball-specific: situation data
+        if (comp.situation) {
+          const sit = comp.situation;
+          result.situation = {
+            balls: sit.balls,
+            strikes: sit.strikes,
+            outs: sit.outs,
+            onFirst: !!sit.onFirst,
+            onSecond: !!sit.onSecond,
+            onThird: !!sit.onThird,
+            batter: sit.batter?.athlete?.displayName,
+            pitcher: sit.pitcher?.athlete?.displayName,
+          };
+        }
+
+        return new Response(JSON.stringify(result), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // On-demand player props sync
+    if (path === "/sync-props") {
+      const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+      await syncPlayerProps(supabase, env);
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Cleanup endpoint: mark stale past events as final
     if (path === "/cleanup") {
       const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
@@ -168,19 +330,28 @@ export default {
     const minute = now.getUTCMinutes();
     const hour = now.getUTCHours();
 
-    // Every minute: refresh live scores + odds, settle bets, clean stale
+    // Every minute: refresh live scores from the scores API (cheap)
     await refreshLiveScores(supabase, env);
-    await settleBets(supabase, env);
     await cleanupStaleGames(supabase);
 
-    // Every 5 minutes: full sync of all primary sports odds
+    // Every 5 minutes: settle bets (uses scores API — separate calls)
     if (minute % 5 === 0) {
+      await settleBets(supabase, env);
+    }
+
+    // Every 10 minutes: full sync of all primary sports odds
+    if (minute % 10 === 0) {
       await syncPrimarySports(supabase, env);
     }
 
     // Every 30 minutes: sync ESPN schedules (7-day lookahead)
     if (minute % 30 === 0) {
       await syncESPNSchedules(supabase);
+    }
+
+    // Hourly: sync player props (expensive — 1 API call per event)
+    if (minute === 15) {
+      await syncPlayerProps(supabase, env);
     }
 
     // Nightly backup (5am UTC)
@@ -197,6 +368,7 @@ const ESPN_SCHEDULE_MAP: Record<string, string> = {
   basketball_nba: "basketball/nba",
   basketball_ncaab: "basketball/mens-college-basketball",
   baseball_mlb: "baseball/mlb",
+  baseball_ncaa: "baseball/college-baseball",
   icehockey_nhl: "hockey/nhl",
 };
 
@@ -422,6 +594,156 @@ async function fetchAndSyncSport(supabase: any, env: Env, sport: string) {
   return syncedGames;
 }
 
+// Sync player props for today's games only — runs hourly to conserve API credits
+// Each event costs 1 API call, so we cap at ~20 events total per cycle
+async function syncPlayerProps(supabase: any, env: Env) {
+  const now = new Date();
+  const startOfDay = new Date(now);
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const endOfDay = new Date(now);
+  endOfDay.setUTCHours(23, 59, 59, 999);
+
+  // Get today's upcoming/live games that have Odds API external_ids (not ESPN-only)
+  const { data: todayGames } = await supabase
+    .from("games")
+    .select("id, external_id, sport, start_time")
+    .in("status", ["upcoming", "live"])
+    .gte("start_time", startOfDay.toISOString())
+    .lte("start_time", endOfDay.toISOString())
+    .not("external_id", "like", "espn_%")
+    .order("start_time", { ascending: true });
+
+  if (!todayGames || todayGames.length === 0) return;
+
+  let apiCalls = 0;
+  const MAX_CALLS = 20; // Hard cap to conserve credits
+
+  for (const game of todayGames) {
+    if (apiCalls >= MAX_CALLS) break;
+
+    const propMarketKeys = PLAYER_PROP_MARKETS[game.sport];
+    if (!propMarketKeys || propMarketKeys.length === 0) continue;
+
+    const marketsParam = propMarketKeys.join(",");
+
+    try {
+      const resp = await fetch(
+        `https://api.the-odds-api.com/v4/sports/${game.sport}/events/${game.external_id}/odds?apiKey=${env.ODDS_API_KEY}&regions=us&markets=${marketsParam}&oddsFormat=american`
+      );
+      apiCalls++;
+
+      const eventData: any = await resp.json();
+
+      // Check for quota errors
+      if (eventData?.error_code === "OUT_OF_USAGE_CREDITS") {
+        console.error("Odds API quota exhausted — stopping prop sync");
+        return;
+      }
+
+      if (!eventData?.bookmakers?.length) continue;
+
+      const bookmaker = eventData.bookmakers[0];
+      for (const market of bookmaker.markets) {
+        const propRows = buildPlayerPropData(game.id, market);
+        if (!propRows) continue;
+
+        for (const row of propRows) {
+          await supabase
+            .from("markets")
+            .upsert(row, { onConflict: "game_id,type,name" });
+        }
+      }
+    } catch (e) {
+      console.error(`Error fetching props for ${game.sport} event ${game.external_id}:`, e);
+    }
+  }
+
+  console.log(`syncPlayerProps: ${apiCalls} API calls for ${todayGames.length} games`);
+}
+
+// Build market rows from a player prop market
+// Outcomes have: name (player), description (Over/Under), price, point
+function buildPlayerPropData(gameId: string, market: any) {
+  const outcomes = market.outcomes;
+  if (!outcomes || outcomes.length === 0) return null;
+
+  // Map API market key to a readable label
+  const PROP_LABELS: Record<string, string> = {
+    player_points: "Points",
+    player_rebounds: "Rebounds",
+    player_assists: "Assists",
+    player_threes: "Threes",
+    player_points_rebounds_assists: "Pts+Reb+Ast",
+    player_points_rebounds: "Pts+Reb",
+    player_points_assists: "Pts+Ast",
+    player_rebounds_assists: "Reb+Ast",
+    player_pass_tds: "Pass TDs",
+    player_pass_yds: "Pass Yards",
+    player_rush_yds: "Rush Yards",
+    player_reception_yds: "Rec Yards",
+    player_receptions: "Receptions",
+    player_anytime_td: "Anytime TD",
+    pitcher_strikeouts: "Strikeouts",
+    batter_home_runs: "Home Runs",
+    batter_hits: "Hits",
+    batter_total_bases: "Total Bases",
+    batter_rbis: "RBIs",
+    player_goals: "Goals",
+    player_shots_on_goal: "Shots on Goal",
+  };
+
+  const propLabel = PROP_LABELS[market.key] || market.key;
+
+  // Group outcomes by player name
+  const playerMap = new Map<
+    string,
+    { over?: any; under?: any; yes?: any }
+  >();
+  for (const o of outcomes) {
+    const existing = playerMap.get(o.name) || {};
+    const desc = (o.description || "").toLowerCase();
+    if (desc === "over") existing.over = o;
+    else if (desc === "under") existing.under = o;
+    else if (desc === "yes") existing.yes = o;
+    playerMap.set(o.name, existing);
+  }
+
+  const rows: any[] = [];
+  for (const [playerName, sides] of playerMap.entries()) {
+    if (sides.over && sides.under) {
+      // Over/Under prop
+      rows.push({
+        game_id: gameId,
+        type: "prop",
+        name: `${playerName} - ${propLabel}`,
+        line: sides.over.point ?? null,
+        home_odds: sides.over.price,
+        away_odds: sides.under.price,
+        over_odds: sides.over.price,
+        under_odds: sides.under.price,
+        is_live: false,
+        last_updated: new Date().toISOString(),
+      });
+    } else if (sides.yes) {
+      // Yes/No prop (like Anytime TD)
+      rows.push({
+        game_id: gameId,
+        type: "prop",
+        name: `${playerName} - ${propLabel}`,
+        line: null,
+        home_odds: sides.yes.price,
+        away_odds: 0,
+        over_odds: null,
+        under_odds: null,
+        is_live: false,
+        last_updated: new Date().toISOString(),
+      });
+    }
+  }
+
+  return rows.length > 0 ? rows : null;
+}
+
 function formatSportTitle(sport: string): string {
   return sport
     .replace(/_/g, " ")
@@ -489,7 +811,8 @@ async function refreshLiveScores(supabase: any, env: Env) {
           .eq("external_id", score.id);
       }
 
-      await fetchAndSyncSport(supabase, env, sport);
+      // NOTE: Do NOT call fetchAndSyncSport here — it burns API credits.
+      // Odds sync happens every 5 min via syncPrimarySports. Scores are enough for live updates.
     } catch (e) {
       console.error(`Error refreshing live scores for ${sport}:`, e);
     }
