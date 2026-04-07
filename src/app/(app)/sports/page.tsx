@@ -6,8 +6,7 @@ import type { OddsApiSport } from "@/lib/types";
 import { isOutrightSport } from "@/lib/types";
 import SportIcon from "@/components/icons/SportIcon";
 import EventSearch from "@/components/search/EventSearch";
-
-const WORKER_URL = "https://tulsa-king-odds.ryboss36010.workers.dev";
+import { WORKER_URL } from "@/lib/config";
 
 export default function SportsPage() {
   const [sports, setSports] = useState<OddsApiSport[]>([]);

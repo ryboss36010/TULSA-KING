@@ -14,10 +14,9 @@ import { useBetSlip } from "@/components/betslip/BetSlipContext";
 interface GameRowProps {
   game: Game;
   markets: Market[];
-  onSelectBet: (game: Game, market: Market, pick: string) => void;
 }
 
-export default function GameRow({ game, markets, onSelectBet }: GameRowProps) {
+export default function GameRow({ game, markets }: GameRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [liveMarkets, setLiveMarkets] = useState(markets);

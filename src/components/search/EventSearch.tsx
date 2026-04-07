@@ -6,8 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Game, OddsApiSport } from "@/lib/types";
 import { getSportLabel, isOutrightSport } from "@/lib/types";
 import SportIcon from "@/components/icons/SportIcon";
-
-const WORKER_URL = "https://tulsa-king-odds.ryboss36010.workers.dev";
+import { WORKER_URL } from "@/lib/config";
 
 interface SearchResult {
   type: "game" | "sport";

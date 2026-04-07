@@ -8,10 +8,8 @@ import { getSportLabel, isOutrightSport } from "@/lib/types";
 import SportIcon from "@/components/icons/SportIcon";
 import { formatDateLabel } from "@/lib/time";
 import GameRow from "@/components/sports/GameRow";
-import { useBetSlip } from "@/components/betslip/BetSlipContext";
 import { filterBettableGames } from "@/lib/games";
-
-const WORKER_URL = "https://tulsa-king-odds.ryboss36010.workers.dev";
+import { WORKER_URL } from "@/lib/config";
 
 export default function SportPage() {
   const { sport } = useParams<{ sport: string }>();
@@ -19,7 +17,6 @@ export default function SportPage() {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
-  const { toggleSelection } = useBetSlip();
 
   useEffect(() => {
     async function load() {
@@ -62,10 +59,6 @@ export default function SportPage() {
 
     load();
   }, [sport]);
-
-  function handleSelectBet(game: Game, market: Market, pick: string) {
-    toggleSelection({ game, market, pick });
-  }
 
   const isOutright = isOutrightSport(sport);
 
@@ -116,7 +109,7 @@ export default function SportPage() {
               key={game.id}
               game={game}
               markets={markets.filter((m) => m.game_id === game.id)}
-              onSelectBet={handleSelectBet}
+
             />
           ))}
         </div>
@@ -149,7 +142,7 @@ export default function SportPage() {
                   key={game.id}
                   game={game}
                   markets={markets.filter((m) => m.game_id === game.id)}
-                  onSelectBet={handleSelectBet}
+    
                 />
               ))}
             </div>

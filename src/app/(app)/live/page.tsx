@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Game, Market } from "@/lib/types";
 import SportSection from "@/components/sports/SportSection";
-import { useBetSlip } from "@/components/betslip/BetSlipContext";
 import { filterBettableGames } from "@/lib/games";
 
 export default function LivePage() {
@@ -12,7 +11,6 @@ export default function LivePage() {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
-  const { toggleSelection } = useBetSlip();
 
   useEffect(() => {
     async function fetchLive() {
@@ -70,10 +68,6 @@ export default function LivePage() {
     };
   }, []);
 
-  function handleSelectBet(game: Game, market: Market, pick: string) {
-    toggleSelection({ game, market, pick });
-  }
-
   const gamesBySport = games.reduce(
     (acc, game) => {
       if (!acc[game.sport]) acc[game.sport] = [];
@@ -113,7 +107,6 @@ export default function LivePage() {
             sport={sport}
             games={sportGames}
             markets={markets}
-            onSelectBet={handleSelectBet}
           />
         ))
       )}

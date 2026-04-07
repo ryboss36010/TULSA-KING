@@ -23,18 +23,6 @@ export function formatOdds(odds: number): string {
 }
 
 /**
- * Calculate counterparty liability.
- * The two counterparties split the bettor's potential profit equally.
- */
-export function calculateCounterpartyShare(
-  wager: number,
-  odds: number
-): number {
-  const profit = calculatePayout(wager, odds) - wager;
-  return profit / 2;
-}
-
-/**
  * Calculate combined parlay odds (American) from an array of American odds.
  * Converts each leg to decimal, multiplies, converts back to American.
  */

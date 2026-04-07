@@ -7,14 +7,12 @@ interface SportSectionProps {
   sport: string;
   games: Game[];
   markets: Market[];
-  onSelectBet: (game: Game, market: Market, pick: string) => void;
 }
 
 export default function SportSection({
   sport,
   games,
   markets,
-  onSelectBet,
 }: SportSectionProps) {
   if (games.length === 0) return null;
 
@@ -45,7 +43,6 @@ export default function SportSection({
             key={game.id}
             game={game}
             markets={markets.filter((m) => m.game_id === game.id)}
-            onSelectBet={onSelectBet}
           />
         ))}
       </div>

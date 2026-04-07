@@ -144,9 +144,3 @@ const SPORT_SVG_ICONS: Record<string, React.FC<{ className: string }>> = {
   default: DefaultSportIcon,
 };
 
-// Also export a "Live" indicator SVG
-export function LiveDot({ className = "w-2 h-2" }: { className?: string }) {
-  return (
-    <span className={`inline-block ${className} bg-red-500 rounded-full animate-pulse`} />
-  );
-}

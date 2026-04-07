@@ -8,7 +8,6 @@ import SportSection from "@/components/sports/SportSection";
 import GameRow from "@/components/sports/GameRow";
 import SportTabs from "@/components/sports/SportTabs";
 import EventSearch from "@/components/search/EventSearch";
-import { useBetSlip } from "@/components/betslip/BetSlipContext";
 import { formatDateLabel } from "@/lib/time";
 import { filterBettableGames } from "@/lib/games";
 
@@ -19,8 +18,6 @@ export default function HomePage() {
   const [activeSport, setActiveSport] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const supabase = createClient();
-  const { toggleSelection } = useBetSlip();
-
   useEffect(() => {
     async function fetchGames() {
       const { data: gamesData } = await supabase
@@ -87,10 +84,6 @@ export default function HomePage() {
       supabase.removeChannel(channel);
     };
   }, []);
-
-  function handleSelectBet(game: Game, market: Market, pick: string) {
-    toggleSelection({ game, market, pick });
-  }
 
   // Get unique sports for tabs
   const allSports = [...new Set(games.map((g) => g.sport))].filter(
@@ -193,7 +186,7 @@ export default function HomePage() {
                 key={game.id}
                 game={game}
                 markets={markets.filter((m) => m.game_id === game.id)}
-                onSelectBet={handleSelectBet}
+
               />
             ))}
           </div>
@@ -215,7 +208,7 @@ export default function HomePage() {
                 sport={sport}
                 games={sportGames}
                 markets={markets}
-                onSelectBet={handleSelectBet}
+
               />
             ))}
           </div>
@@ -236,7 +229,7 @@ export default function HomePage() {
                 key={game.id}
                 game={game}
                 markets={markets.filter((m) => m.game_id === game.id)}
-                onSelectBet={handleSelectBet}
+
               />
             ))}
           </div>
