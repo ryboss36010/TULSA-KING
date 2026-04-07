@@ -1,0 +1,17 @@
+name = "tulsa-king-odds"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[triggers]
+crons = ["*/5 * * * *", "0 5 * * *"]
+
+[vars]
+SUPABASE_URL = "https://idnybrcdqqhenckqoeqc.supabase.co"
+
+[[r2_buckets]]
+binding = "LEDGER_BACKUP"
+bucket_name = "tulsa-king-ledger-backups"
+
+# Set secrets via:
+# wrangler secret put ODDS_API_KEY
+# wrangler secret put SUPABASE_SERVICE_KEY
