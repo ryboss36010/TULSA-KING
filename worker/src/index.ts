@@ -159,18 +159,18 @@ export default {
     const minute = now.getUTCMinutes();
     const hour = now.getUTCHours();
 
-    // Always: settle bets, refresh live scores, and clean up stale games
-    await settleBets(supabase, env);
+    // Every minute: refresh live scores + odds, settle bets, clean stale
     await refreshLiveScores(supabase, env);
+    await settleBets(supabase, env);
     await cleanupStaleGames(supabase);
 
-    // Sync primary sports hourly
-    if (minute < 5) {
+    // Every 5 minutes: full sync of all primary sports (upcoming games + odds)
+    if (minute % 5 === 0) {
       await syncPrimarySports(supabase, env);
     }
 
     // Nightly backup (5am UTC)
-    if (hour === 5 && minute < 5) {
+    if (hour === 5 && minute < 2) {
       await backupLedger(supabase, env);
     }
   },

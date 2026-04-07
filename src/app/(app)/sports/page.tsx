@@ -6,7 +6,7 @@ import type { OddsApiSport } from "@/lib/types";
 import { isOutrightSport } from "@/lib/types";
 import SportIcon from "@/components/icons/SportIcon";
 import EventSearch from "@/components/search/EventSearch";
-import { WORKER_URL } from "@/lib/config";
+import { WORKER_URL, isAllowedSport } from "@/lib/config";
 
 export default function SportsPage() {
   const [sports, setSports] = useState<OddsApiSport[]>([]);
@@ -28,7 +28,7 @@ export default function SportsPage() {
     load();
   }, []);
 
-  const activeSports = sports.filter((s) => s.active);
+  const activeSports = sports.filter((s) => s.active && isAllowedSport(s.key));
 
   const groupedActive = activeSports.reduce(
     (acc, sport) => {

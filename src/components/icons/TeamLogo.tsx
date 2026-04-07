@@ -9,21 +9,7 @@ interface TeamLogoProps {
   className?: string;
 }
 
-// ESPN logo CDN lookup — maps sport keys to ESPN league slugs and known team abbreviations
-const ESPN_LEAGUES: Record<string, { league: string; sport: string }> = {
-  americanfootball_nfl: { league: "nfl", sport: "football" },
-  americanfootball_ncaaf: { league: "college-football", sport: "football" },
-  basketball_nba: { league: "nba", sport: "basketball" },
-  basketball_ncaab: { league: "mens-college-basketball", sport: "basketball" },
-  baseball_mlb: { league: "mlb", sport: "baseball" },
-  icehockey_nhl: { league: "nhl", sport: "hockey" },
-  soccer_usa_mls: { league: "usa.1", sport: "soccer" },
-  soccer_epl: { league: "eng.1", sport: "soccer" },
-  soccer_uefa_champs_league: { league: "uefa.champions", sport: "soccer" },
-};
-
-// Known team name → ESPN team ID mappings for reliable logo lookups
-// These are the most common teams. For unknown teams, we fall back to sport icon.
+// NFL team name → logo filename
 const NFL_TEAMS: Record<string, string> = {
   "Arizona Cardinals": "ari", "Atlanta Falcons": "atl", "Baltimore Ravens": "bal",
   "Buffalo Bills": "buf", "Carolina Panthers": "car", "Chicago Bears": "chi",
@@ -38,6 +24,7 @@ const NFL_TEAMS: Record<string, string> = {
   "Tennessee Titans": "ten", "Washington Commanders": "wsh",
 };
 
+// NBA team name → logo filename
 const NBA_TEAMS: Record<string, string> = {
   "Atlanta Hawks": "atl", "Boston Celtics": "bos", "Brooklyn Nets": "bkn",
   "Charlotte Hornets": "cha", "Chicago Bulls": "chi", "Cleveland Cavaliers": "cle",
@@ -51,19 +38,7 @@ const NBA_TEAMS: Record<string, string> = {
   "Toronto Raptors": "tor", "Utah Jazz": "uta", "Washington Wizards": "wsh",
 };
 
-const MLB_TEAMS: Record<string, string> = {
-  "Arizona Diamondbacks": "ari", "Atlanta Braves": "atl", "Baltimore Orioles": "bal",
-  "Boston Red Sox": "bos", "Chicago Cubs": "chc", "Chicago White Sox": "chw",
-  "Cincinnati Reds": "cin", "Cleveland Guardians": "cle", "Colorado Rockies": "col",
-  "Detroit Tigers": "det", "Houston Astros": "hou", "Kansas City Royals": "kc",
-  "Los Angeles Angels": "laa", "Los Angeles Dodgers": "lad", "Miami Marlins": "mia",
-  "Milwaukee Brewers": "mil", "Minnesota Twins": "min", "New York Mets": "nym",
-  "New York Yankees": "nyy", "Oakland Athletics": "oak", "Philadelphia Phillies": "phi",
-  "Pittsburgh Pirates": "pit", "San Diego Padres": "sd", "San Francisco Giants": "sf",
-  "Seattle Mariners": "sea", "St. Louis Cardinals": "stl", "Tampa Bay Rays": "tb",
-  "Texas Rangers": "tex", "Toronto Blue Jays": "tor", "Washington Nationals": "wsh",
-};
-
+// NHL team name → logo filename
 const NHL_TEAMS: Record<string, string> = {
   "Anaheim Ducks": "ana", "Arizona Coyotes": "ari", "Boston Bruins": "bos",
   "Buffalo Sabres": "buf", "Calgary Flames": "cgy", "Carolina Hurricanes": "car",
@@ -79,40 +54,141 @@ const NHL_TEAMS: Record<string, string> = {
   "Winnipeg Jets": "wpg",
 };
 
-function getTeamAbbr(teamName: string, sport: string): string | null {
-  if (sport.startsWith("americanfootball_nfl")) return NFL_TEAMS[teamName] || null;
-  if (sport.startsWith("basketball_nba")) return NBA_TEAMS[teamName] || null;
-  if (sport.startsWith("baseball_mlb")) return MLB_TEAMS[teamName] || null;
-  if (sport.startsWith("icehockey_nhl")) return NHL_TEAMS[teamName] || null;
-  return null;
-}
+// NCAA team name → logo filename (covers both NCAAF and NCAAB — same logos)
+const NCAA_TEAMS: Record<string, string> = {
+  // Major programs — handles common Odds API name variants
+  "Alabama Crimson Tide": "alabama", "Alabama": "alabama",
+  "Ohio State Buckeyes": "ohio-state", "Ohio State": "ohio-state",
+  "Georgia Bulldogs": "georgia", "Georgia": "georgia",
+  "Michigan Wolverines": "michigan", "Michigan": "michigan",
+  "Clemson Tigers": "clemson", "Clemson": "clemson",
+  "Texas Longhorns": "texas", "Texas": "texas",
+  "LSU Tigers": "lsu", "LSU": "lsu",
+  "Oklahoma Sooners": "oklahoma", "Oklahoma": "oklahoma",
+  "USC Trojans": "usc", "USC": "usc",
+  "Penn State Nittany Lions": "penn-state", "Penn State": "penn-state",
+  "Florida Gators": "florida", "Florida": "florida",
+  "Oregon Ducks": "oregon", "Oregon": "oregon",
+  "Notre Dame Fighting Irish": "notre-dame", "Notre Dame": "notre-dame",
+  "Auburn Tigers": "auburn", "Auburn": "auburn",
+  "Tennessee Volunteers": "tennessee", "Tennessee": "tennessee",
+  "Michigan State Spartans": "michigan-state", "Michigan State": "michigan-state",
+  "Wisconsin Badgers": "wisconsin", "Wisconsin": "wisconsin",
+  "Miami Hurricanes": "miami-fl", "Miami (FL)": "miami-fl", "Miami FL": "miami-fl",
+  "Florida State Seminoles": "florida-state", "Florida State": "florida-state",
+  "Texas A&M Aggies": "texas-am", "Texas A&M": "texas-am",
+  "Iowa Hawkeyes": "iowa", "Iowa": "iowa",
+  "Washington Huskies": "washington", "Washington": "washington",
+  "Oklahoma State Cowboys": "oklahoma-state", "Oklahoma State": "oklahoma-state",
+  "Ole Miss Rebels": "ole-miss", "Ole Miss": "ole-miss",
+  "Nebraska Cornhuskers": "nebraska", "Nebraska": "nebraska",
+  "NC State Wolfpack": "nc-state", "NC State": "nc-state",
+  "North Carolina Tar Heels": "north-carolina", "North Carolina": "north-carolina", "UNC": "north-carolina",
+  "Baylor Bears": "baylor", "Baylor": "baylor",
+  "Utah Utes": "utah", "Utah": "utah",
+  "Arkansas Razorbacks": "arkansas", "Arkansas": "arkansas",
+  "Arizona State Sun Devils": "arizona-state", "Arizona State": "arizona-state",
+  "Colorado Buffaloes": "colorado", "Colorado": "colorado",
+  "Kentucky Wildcats": "kentucky", "Kentucky": "kentucky",
+  "Mississippi State Bulldogs": "mississippi-state", "Mississippi State": "mississippi-state",
+  "Pittsburgh Panthers": "pittsburgh", "Pittsburgh": "pittsburgh", "Pitt": "pittsburgh",
+  "West Virginia Mountaineers": "west-virginia", "West Virginia": "west-virginia",
+  "Stanford Cardinal": "stanford", "Stanford": "stanford",
+  "Kansas Jayhawks": "kansas", "Kansas": "kansas",
+  "Kansas State Wildcats": "kansas-state", "Kansas State": "kansas-state",
+  "Iowa State Cyclones": "iowa-state", "Iowa State": "iowa-state",
+  "Minnesota Golden Gophers": "minnesota", "Minnesota": "minnesota",
+  "Indiana Hoosiers": "indiana", "Indiana": "indiana",
+  "South Carolina Gamecocks": "south-carolina", "South Carolina": "south-carolina",
+  "Maryland Terrapins": "maryland", "Maryland": "maryland",
+  "Texas Tech Red Raiders": "texas-tech", "Texas Tech": "texas-tech",
+  "Louisville Cardinals": "louisville", "Louisville": "louisville",
+  "Duke Blue Devils": "duke", "Duke": "duke",
+  "BYU Cougars": "byu", "BYU": "byu",
+  "Cincinnati Bearcats": "cincinnati", "Cincinnati": "cincinnati",
+  "UCF Knights": "ucf", "UCF": "ucf",
+  "TCU Horned Frogs": "tcu", "TCU": "tcu",
+  "Purdue Boilermakers": "purdue", "Purdue": "purdue",
+  "Illinois Fighting Illini": "illinois", "Illinois": "illinois",
+  "Oregon State Beavers": "oregon-state", "Oregon State": "oregon-state",
+  "Washington State Cougars": "washington-state", "Washington State": "washington-state",
+  "Georgia Tech Yellow Jackets": "georgia-tech", "Georgia Tech": "georgia-tech",
+  "Boston College Eagles": "boston-college", "Boston College": "boston-college",
+  "Wake Forest Demon Deacons": "wake-forest", "Wake Forest": "wake-forest",
+  "Virginia Cavaliers": "virginia", "Virginia": "virginia",
+  "Syracuse Orange": "syracuse", "Syracuse": "syracuse",
+  "Rutgers Scarlet Knights": "rutgers", "Rutgers": "rutgers",
+  "Northwestern Wildcats": "northwestern", "Northwestern": "northwestern",
+  "Arizona Wildcats": "arizona", "Arizona": "arizona",
+  "California Golden Bears": "california", "California": "california", "Cal": "california",
+  "Missouri Tigers": "missouri", "Missouri": "missouri",
+  "Vanderbilt Commodores": "vanderbilt", "Vanderbilt": "vanderbilt",
+  "SMU Mustangs": "smu", "SMU": "smu",
+  "Houston Cougars": "houston",
+  "Army Black Knights": "army", "Army": "army",
+  "Navy Midshipmen": "navy", "Navy": "navy",
+  "Air Force Falcons": "air-force", "Air Force": "air-force",
+  "Memphis Tigers": "memphis", "Memphis": "memphis",
+  "Tulane Green Wave": "tulane", "Tulane": "tulane",
+  // NCAAB-specific
+  "Gonzaga Bulldogs": "gonzaga", "Gonzaga": "gonzaga",
+  "UConn Huskies": "uconn", "UConn": "uconn", "Connecticut": "uconn",
+  "Villanova Wildcats": "villanova", "Villanova": "villanova",
+  "UCLA Bruins": "ucla", "UCLA": "ucla",
+  "Creighton Bluejays": "creighton", "Creighton": "creighton",
+  "Marquette Golden Eagles": "marquette", "Marquette": "marquette",
+  "St. John's Red Storm": "st-johns", "St. John's": "st-johns",
+  "Providence Friars": "providence", "Providence": "providence",
+  "Seton Hall Pirates": "seton-hall", "Seton Hall": "seton-hall",
+  "Xavier Musketeers": "xavier", "Xavier": "xavier",
+  "Butler Bulldogs": "butler", "Butler": "butler",
+  "Dayton Flyers": "dayton", "Dayton": "dayton",
+  "San Diego State Aztecs": "san-diego-state", "San Diego State": "san-diego-state", "SDSU": "san-diego-state",
+  "Boise State Broncos": "boise-state", "Boise State": "boise-state",
+  "Nevada Wolf Pack": "nevada", "Nevada": "nevada",
+  "New Mexico Lobos": "new-mexico", "New Mexico": "new-mexico",
+  "Colorado State Rams": "colorado-state", "Colorado State": "colorado-state",
+  "Wyoming Cowboys": "wyoming", "Wyoming": "wyoming",
+  "Fresno State Bulldogs": "fresno-state", "Fresno State": "fresno-state",
+  "Utah State Aggies": "utah-state", "Utah State": "utah-state",
+  "UNLV Rebels": "unlv", "UNLV": "unlv",
+};
 
-function getLogoUrl(teamName: string, sport: string): string | null {
-  const espn = ESPN_LEAGUES[sport];
-  if (!espn) return null;
-
-  const abbr = getTeamAbbr(teamName, sport);
-  if (!abbr) return null;
-
-  // ESPN CDN logo URL pattern
-  if (espn.sport === "soccer") {
-    return null; // Soccer team IDs are numeric, skip for now
+function getLogoPath(teamName: string, sport: string): string | null {
+  if (sport.startsWith("americanfootball_nfl") || sport.includes("super_bowl")) {
+    const abbr = NFL_TEAMS[teamName];
+    return abbr ? `/logos/nfl/${abbr}.png` : null;
   }
-
-  return `https://a.espncdn.com/i/teamlogos/${espn.sport}/500/scoreboard/${abbr}.png`;
+  if (sport.startsWith("basketball_nba") || sport.includes("nba_championship")) {
+    const abbr = NBA_TEAMS[teamName];
+    return abbr ? `/logos/nba/${abbr}.png` : null;
+  }
+  if (sport.startsWith("icehockey_nhl") || sport.includes("nhl_championship")) {
+    const abbr = NHL_TEAMS[teamName];
+    return abbr ? `/logos/nhl/${abbr}.png` : null;
+  }
+  if (sport.startsWith("americanfootball_ncaaf") || sport.includes("ncaaf_championship")) {
+    const file = NCAA_TEAMS[teamName];
+    return file ? `/logos/ncaaf/${file}.png` : null;
+  }
+  if (sport.startsWith("basketball_ncaab")) {
+    const file = NCAA_TEAMS[teamName];
+    return file ? `/logos/ncaab/${file}.png` : null;
+  }
+  return null;
 }
 
 export default function TeamLogo({ teamName, sport, className = "w-5 h-5" }: TeamLogoProps) {
   const [imgError, setImgError] = useState(false);
-  const logoUrl = getLogoUrl(teamName, sport);
+  const logoPath = getLogoPath(teamName, sport);
 
-  if (!logoUrl || imgError) {
+  if (!logoPath || imgError) {
     return <SportIcon sport={sport} className={className} />;
   }
 
   return (
     <img
-      src={logoUrl}
+      src={logoPath}
       alt={teamName}
       className={`${className} object-contain`}
       onError={() => setImgError(true)}

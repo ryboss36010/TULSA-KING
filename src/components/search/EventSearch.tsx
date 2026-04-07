@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Game, OddsApiSport } from "@/lib/types";
 import { getSportLabel, isOutrightSport } from "@/lib/types";
 import SportIcon from "@/components/icons/SportIcon";
-import { WORKER_URL } from "@/lib/config";
+import { WORKER_URL, isAllowedSport } from "@/lib/config";
 
 interface SearchResult {
   type: "game" | "sport";
@@ -35,7 +35,7 @@ export default function EventSearch() {
         const resp = await fetch(`${WORKER_URL}/all-sports`);
         const data: OddsApiSport[] = await resp.json();
         if (Array.isArray(data)) {
-          setAllSports(data);
+          setAllSports(data.filter((s) => isAllowedSport(s.key)));
         }
       } catch (e) {
         console.error("Failed to load sports:", e);

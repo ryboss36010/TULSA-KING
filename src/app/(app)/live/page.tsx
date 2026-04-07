@@ -36,7 +36,7 @@ export default function LivePage() {
     }
 
     fetchLive();
-    const interval = setInterval(fetchLive, 15000);
+    const interval = setInterval(fetchLive, 10000);
 
     const channel = supabase
       .channel("live-games")
