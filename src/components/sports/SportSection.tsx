@@ -1,6 +1,6 @@
 import type { Game, Market } from "@/lib/types";
-import { SPORT_LABELS } from "@/lib/types";
-import GameCard from "./GameCard";
+import { getSportLabel, getSportIcon } from "@/lib/types";
+import GameRow from "./GameRow";
 
 interface SportSectionProps {
   sport: string;
@@ -18,12 +18,29 @@ export default function SportSection({
   if (games.length === 0) return null;
 
   return (
-    <section className="space-y-3">
-      <h2 className="text-lg font-bold text-white px-1">
-        {SPORT_LABELS[sport] || sport}
-      </h2>
+    <section className="space-y-0.5">
+      {/* Sport header with column labels */}
+      <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,64px)] md:grid-cols-[minmax(0,1fr)_repeat(3,80px)] gap-0.5 items-center px-0">
+        <div className="flex items-center gap-2 px-3 py-2">
+          <span className="text-sm">{getSportIcon(sport)}</span>
+          <span className="text-xs font-semibold text-white">
+            {getSportLabel(sport)}
+          </span>
+        </div>
+        <span className="text-[10px] text-[var(--text-muted)] text-center font-medium">
+          SPREAD
+        </span>
+        <span className="text-[10px] text-[var(--text-muted)] text-center font-medium">
+          TOTAL
+        </span>
+        <span className="text-[10px] text-[var(--text-muted)] text-center font-medium">
+          MONEY
+        </span>
+      </div>
+
+      {/* Game rows */}
       {games.map((game) => (
-        <GameCard
+        <GameRow
           key={game.id}
           game={game}
           markets={markets.filter((m) => m.game_id === game.id)}

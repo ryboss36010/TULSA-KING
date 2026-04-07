@@ -14,9 +14,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-[var(--bg-primary)]">
       <TopNav />
-      <main className="pb-20 md:pb-0">{children}</main>
+      <main className="pb-16 md:pb-0 md:pt-0">{children}</main>
       <BottomNav />
       <BetSlip />
     </div>

@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Game, Market } from "@/lib/types";
-import GameCard from "@/components/sports/GameCard";
-import { SPORT_LABELS } from "@/lib/types";
+import SportSection from "@/components/sports/SportSection";
 import { useBetSlip } from "@/components/betslip/BetSlipContext";
 
 export default function LivePage() {
@@ -37,26 +36,28 @@ export default function LivePage() {
     }
 
     fetchLive();
-
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchLive, 30000);
+    const interval = setInterval(fetchLive, 15000);
 
     const channel = supabase
       .channel("live-games")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "games", filter: "status=eq.live" },
+        { event: "*", schema: "public", table: "games" },
         (payload) => {
-          setGames((prev) => {
-            const updated = payload.new as Game;
-            const idx = prev.findIndex((g) => g.id === updated.id);
-            if (idx >= 0) {
-              const copy = [...prev];
-              copy[idx] = updated;
-              return copy;
-            }
-            return [...prev, updated];
-          });
+          const updated = payload.new as Game;
+          if (updated.status === "live") {
+            setGames((prev) => {
+              const idx = prev.findIndex((g) => g.id === updated.id);
+              if (idx >= 0) {
+                const copy = [...prev];
+                copy[idx] = updated;
+                return copy;
+              }
+              return [...prev, updated];
+            });
+          } else {
+            setGames((prev) => prev.filter((g) => g.id !== updated.id));
+          }
         }
       )
       .subscribe();
@@ -83,37 +84,35 @@ export default function LivePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-400 animate-pulse">Loading live games...</div>
+        <div className="text-[var(--text-muted)] animate-pulse text-sm">
+          Loading live games...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-8">
-      <div className="flex items-center gap-2">
-        <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-        <h1 className="text-2xl font-bold text-white">Live Betting</h1>
+    <div className="max-w-4xl mx-auto px-2 md:px-4 py-3 space-y-3">
+      <div className="flex items-center gap-2 px-2">
+        <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+        <h1 className="text-lg font-bold text-white">Live</h1>
       </div>
 
       {games.length === 0 ? (
-        <p className="text-gray-500 text-center py-12">
-          No live games right now. Check back during game time.
-        </p>
+        <div className="text-center py-16">
+          <p className="text-[var(--text-muted)] text-sm">
+            No live games right now. Check back during game time.
+          </p>
+        </div>
       ) : (
         Object.entries(gamesBySport).map(([sport, sportGames]) => (
-          <section key={sport} className="space-y-3">
-            <h2 className="text-lg font-bold text-white">
-              {SPORT_LABELS[sport] || sport}
-            </h2>
-            {sportGames.map((game) => (
-              <GameCard
-                key={game.id}
-                game={game}
-                markets={markets.filter((m) => m.game_id === game.id)}
-                onSelectBet={handleSelectBet}
-              />
-            ))}
-          </section>
+          <SportSection
+            key={sport}
+            sport={sport}
+            games={sportGames}
+            markets={markets}
+            onSelectBet={handleSelectBet}
+          />
         ))
       )}
     </div>

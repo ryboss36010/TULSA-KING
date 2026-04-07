@@ -24,7 +24,7 @@ export interface Game {
 export interface Market {
   id: string;
   game_id: string;
-  type: "moneyline" | "spread" | "over_under" | "prop";
+  type: "moneyline" | "spread" | "over_under" | "prop" | "outright";
   name: string;
   line: number | null;
   home_odds: number;
@@ -81,19 +81,17 @@ export interface BetWithDetails extends Bet {
   placer: Profile;
 }
 
-export type Sport =
-  | "americanfootball_nfl"
-  | "americanfootball_ncaaf"
-  | "basketball_nba"
-  | "basketball_ncaab"
-  | "baseball_mlb"
-  | "icehockey_nhl"
-  | "soccer_usa_mls"
-  | "soccer_epl"
-  | "golf_pga"
-  | "tennis_atp"
-  | "mma_mixed_martial_arts";
+// Sport from the Odds API
+export interface OddsApiSport {
+  key: string;
+  group: string;
+  title: string;
+  description: string;
+  active: boolean;
+  has_outrights: boolean;
+}
 
+// Known sport labels for primary sports — dynamic sports use their API title
 export const SPORT_LABELS: Record<string, string> = {
   americanfootball_nfl: "NFL",
   americanfootball_ncaaf: "College Football",
@@ -103,7 +101,45 @@ export const SPORT_LABELS: Record<string, string> = {
   icehockey_nhl: "NHL",
   soccer_usa_mls: "MLS",
   soccer_epl: "Premier League",
-  golf_pga: "PGA Golf",
-  tennis_atp: "Tennis",
   mma_mixed_martial_arts: "UFC/MMA",
 };
+
+// Map sport keys to emoji icons
+export const SPORT_ICONS: Record<string, string> = {
+  americanfootball: "🏈",
+  basketball: "🏀",
+  baseball: "⚾",
+  icehockey: "🏒",
+  soccer: "⚽",
+  golf: "⛳",
+  tennis: "🎾",
+  mma: "🥊",
+  boxing: "🥊",
+  cricket: "🏏",
+  rugbyleague: "🏉",
+  rugbyunion: "🏉",
+  aussierules: "🏉",
+};
+
+// Get the icon for a sport key by matching the prefix
+export function getSportIcon(sportKey: string): string {
+  for (const [prefix, icon] of Object.entries(SPORT_ICONS)) {
+    if (sportKey.startsWith(prefix)) return icon;
+  }
+  return "🏅";
+}
+
+// Get a readable label for any sport key
+export function getSportLabel(sportKey: string, apiTitle?: string): string {
+  if (SPORT_LABELS[sportKey]) return SPORT_LABELS[sportKey];
+  if (apiTitle) return apiTitle;
+  // Fallback: convert key to readable format
+  return sportKey
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// Check if a sport key is an outright/futures market
+export function isOutrightSport(sportKey: string): boolean {
+  return sportKey.includes("_winner") || sportKey.includes("_championship") || sportKey.includes("_series_winner");
+}

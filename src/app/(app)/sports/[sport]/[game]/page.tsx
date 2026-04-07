@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Game, Market } from "@/lib/types";
+import { isOutrightSport, getSportLabel } from "@/lib/types";
 import MarketGroup from "@/components/sports/MarketGroup";
 import { useBetSlip } from "@/components/betslip/BetSlipContext";
 
@@ -12,6 +13,7 @@ export default function GameDetailPage() {
   const [game, setGame] = useState<Game | null>(null);
   const [markets, setMarkets] = useState<Market[]>([]);
   const [activeTab, setActiveTab] = useState("game-lines");
+  const [searchQuery, setSearchQuery] = useState("");
   const supabase = createClient();
   const { addSelection } = useBetSlip();
 
@@ -87,6 +89,87 @@ export default function GameDetailPage() {
     );
   }
 
+  function handleSelectBet(g: Game, market: Market, pick: string) {
+    addSelection({ game: g, market, pick });
+  }
+
+  const isOutright = isOutrightSport(game.sport);
+
+  // Outright/futures detail page
+  if (isOutright) {
+    const outrightMarkets = markets
+      .filter((m) => m.type === "outright")
+      .sort((a, b) => {
+        const aOdds = a.home_odds;
+        const bOdds = b.home_odds;
+        if (aOdds > 0 && bOdds > 0) return aOdds - bOdds;
+        if (aOdds < 0 && bOdds < 0) return bOdds - aOdds;
+        return aOdds < 0 ? -1 : 1;
+      });
+
+    const filtered = searchQuery
+      ? outrightMarkets.filter((m) =>
+          m.name.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : outrightMarkets;
+
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <p className="text-[var(--accent-green)] text-xs font-semibold uppercase">
+            Futures
+          </p>
+          <h1 className="text-white text-2xl font-bold">{game.home_team}</h1>
+          <p className="text-[var(--text-secondary)] text-sm">
+            {getSportLabel(game.sport)} &middot;{" "}
+            {new Date(game.start_time).toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "short",
+              day: "numeric",
+            })}
+          </p>
+          <p className="text-[var(--text-muted)] text-xs">
+            {outrightMarkets.length} outcomes available
+          </p>
+        </div>
+
+        {/* Search within outcomes */}
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search outcomes..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-3 pl-10 bg-[var(--bg-button)] border border-[var(--border)] rounded-lg text-white placeholder-[var(--text-muted)] focus:border-[var(--accent-green)] focus:outline-none"
+          />
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </div>
+
+        {/* Outcomes list */}
+        <MarketGroup
+          title={`Outcomes${filtered.length !== outrightMarkets.length ? ` (${filtered.length} of ${outrightMarkets.length})` : ""}`}
+          markets={filtered}
+          game={game}
+          onSelectBet={handleSelectBet}
+        />
+      </div>
+    );
+  }
+
+  // Standard game detail page
   const gameLines = markets.filter(
     (m) => m.type === "moneyline" || m.type === "spread" || m.type === "over_under"
   );
@@ -102,10 +185,6 @@ export default function GameDetailPage() {
     { id: "player-props", label: "Player Props", count: playerProps.length },
     { id: "game-props", label: "Game Props", count: gameProps.length },
   ];
-
-  function handleSelectBet(g: Game, market: Market, pick: string) {
-    addSelection({ game: g, market, pick });
-  }
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
@@ -137,7 +216,7 @@ export default function GameDetailPage() {
           </div>
         </div>
         {game.status === "upcoming" && (
-          <p className="text-gray-400 text-sm">
+          <p className="text-[var(--text-secondary)] text-sm">
             {new Date(game.start_time).toLocaleString("en-US", {
               weekday: "long",
               month: "short",
@@ -150,15 +229,15 @@ export default function GameDetailPage() {
       </div>
 
       {/* Market tabs */}
-      <div className="flex gap-1 bg-gray-900 rounded-xl p-1 overflow-x-auto no-scrollbar">
+      <div className="flex gap-1 bg-[var(--bg-secondary)] rounded-lg p-1 overflow-x-auto no-scrollbar">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg whitespace-nowrap transition ${
               activeTab === tab.id
-                ? "bg-gray-800 text-white"
-                : "text-gray-400 hover:text-gray-200"
+                ? "bg-[var(--bg-button)] text-white"
+                : "text-[var(--text-muted)] hover:text-white"
             }`}
           >
             {tab.label}
@@ -213,12 +292,12 @@ export default function GameDetailPage() {
         )}
 
         {activeTab === "player-props" && playerProps.length === 0 && (
-          <p className="text-gray-500 text-center py-8">
+          <p className="text-[var(--text-muted)] text-center py-8">
             No player props available for this game
           </p>
         )}
         {activeTab === "game-props" && gameProps.length === 0 && (
-          <p className="text-gray-500 text-center py-8">
+          <p className="text-[var(--text-muted)] text-center py-8">
             No game props available for this game
           </p>
         )}

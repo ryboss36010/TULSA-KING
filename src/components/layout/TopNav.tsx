@@ -16,11 +16,11 @@ export default function TopNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="hidden md:flex items-center justify-between px-6 h-16 bg-gray-900 border-b border-gray-800">
-      <Link href="/" className="text-xl font-bold text-white tracking-wider">
-        TULSA <span className="text-green-500">KING</span>
+    <nav className="hidden md:flex items-center justify-between px-6 h-14 bg-[var(--bg-secondary)] border-b border-[var(--border)]">
+      <Link href="/" className="text-lg font-black text-white tracking-wider">
+        TULSA <span className="text-[var(--accent-green)]">KING</span>
       </Link>
-      <div className="flex gap-6">
+      <div className="flex gap-5">
         {links.map((link) => {
           const isActive =
             link.href === "/"
@@ -32,8 +32,8 @@ export default function TopNav() {
               href={link.href}
               className={`text-sm font-medium transition ${
                 isActive
-                  ? "text-green-500"
-                  : "text-gray-400 hover:text-white"
+                  ? "text-white"
+                  : "text-[var(--text-muted)] hover:text-white"
               }`}
             >
               {link.label}
@@ -43,7 +43,7 @@ export default function TopNav() {
       </div>
       <Link
         href="/settings"
-        className="text-gray-400 hover:text-white text-sm"
+        className="text-[var(--text-muted)] hover:text-white text-sm"
       >
         Settings
       </Link>
